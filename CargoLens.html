@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CargoLens - Package Tracking</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary: #3498db;
+            --primary-light: #5dade2;
+            --primary-dark: #2980b9;
+            --secondary: #2c3e50;
+            --secondary-light: #34495e;
+            --success: #2ecc71;
+            --success-light: #58d68d;
+            --warning: #f39c12;
+            --warning-light: #f7dc6f;
+            --danger: #e74c3c;
+            --danger-light: #ec7063;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #95a5a6;
+            --gradient: linear-gradient(135deg, #3498db, #2c3e50);
+            --gradient-light: linear-gradient(135deg, #5dade2, #34495e);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--gradient);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: white;
+        }
+        
+        .loading-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Auth Pages */
+        .auth-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--gradient);
+            padding: 20px;
+        }
+        
+        .auth-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        
+        .auth-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+        
+        .auth-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--secondary);
+        }
+        
+        .auth-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .auth-tab.active {
+            background: var(--gradient);
+            color: white;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--secondary);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 1rem;
+        }
+        
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+        }
+        
+        .btn-block {
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .auth-switch {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .auth-switch a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Dashboard Layout */
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        /* Top Navigation Bar - Mobile Optimized */
+        .top-navbar {
+            background: var(--gradient);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .nav-brand i {
+            animation: pulse 2s infinite;
+        }
+        
+        .nav-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .nav-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: bold;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Bottom Navigation - Mobile Optimized */
+        .bottom-navbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            color: var(--gray);
+            transition: all 0.3s ease;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            position: relative;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+        }
+        
+        .nav-item:active {
+            background: #f8f9fa;
+        }
+        
+        .nav-icon {
+            font-size: 1.2rem;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 15px;
+            padding-bottom: 80px; /* Space for bottom nav */
+            overflow-y: auto;
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 20px;
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--gradient);
+        }
+        
+        .stat-card:active {
+            transform: scale(0.98);
+        }
+        
+        .stat-card.delivered::before {
+            background: var(--success);
+        }
+        
+        .stat-card.pending::before {
+            background: var(--warning);
+        }
+        
+        .stat-card.issues::before {
+            background: var(--danger);
+        }
+        
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stat-card-title {
+            font-size: 0.8rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+        
+        .stat-card-icon {
+            width: 35px;
+            height: 35px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        .stat-card-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+        
+        /* Charts Section */
+        .charts-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
+        .chart-container {
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        /* Tables */
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        th, td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            font-size: 0.8rem;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        tr:active {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        
+        .status-delivered {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-in-transit {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status-failed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* Driver Performance */
+        .driver-performance {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .driver-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .driver-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        
+        .driver-details {
+            flex: 1;
+        }
+        
+        .driver-name {
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .driver-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 0.7rem;
+            color: var(--gray);
+            margin-bottom: 5px;
+        }
+        
+        .driver-rating {
+            color: #f39c12;
+        }
+        
+        .performance-bar {
+            height: 6px;
+            background: #eee;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .performance-fill {
+            height: 100%;
+            background: var(--success);
+            border-radius: 3px;
+        }
+        
+        /* Recent Activity */
+        .activity-list {
+            list-style: none;
+        }
+        
+        .activity-item {
+            display: flex;
+            gap: 15px;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-icon {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        .activity-icon.primary {
+            background: var(--primary);
+        }
+        
+        .activity-icon.success {
+            background: var(--success);
+        }
+        
+        .activity-icon.warning {
+            background: var(--warning);
+        }
+        
+        .activity-details {
+            flex: 1;
+        }
+        
+        .activity-title {
+            font-weight: 500;
+            margin-bottom: 3px;
+            font-size: 0.9rem;
+        }
+        
+        .activity-time {
+            font-size: 0.7rem;
+            color: var(--gray);
+        }
+        
+        /* Map Preview */
+        .map-preview {
+            height: 150px;
+            background: #e9ecef;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+            color: var(--gray);
+        }
+        
+        /* Search Bar */
+        .search-box {
+            background: white;
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .search-box input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 0.9rem;
+        }
+        
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: var(--gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+            z-index: 90;
+            animation: bounce 2s infinite;
+            cursor: pointer;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray);
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        /* Driver App Styles */
+        .mobile-container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* App Header */
+        .app-header {
+            background: var(--gradient);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .header-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+        }
+        
+        /* App Content */
+        .app-content {
+            padding: 15px;
+            animation: fadeIn 0.5s ease-out;
+            padding-bottom: 80px; /* Space for bottom nav */
+        }
+        
+        /* Welcome Card */
+        .welcome-card {
+            background: var(--gradient);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            animation: slideInLeft 0.6s ease-out;
+        }
+        
+        @keyframes slideInLeft {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .welcome-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+        
+        .welcome-card p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        /* Package List */
+        .package-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .package-item {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            animation: slideInRight 0.5s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .package-item:active {
+            transform: scale(0.98);
+            background: #f8f9fa;
+        }
+        
+        .package-info {
+            flex: 1;
+        }
+        
+        .package-id {
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+        
+        .package-details {
+            font-size: 0.8rem;
+            color: var(--gray);
+            margin-top: 3px;
+        }
+        
+        /* Views */
+        .view {
+            display: none;
+        }
+        
+        .view-active {
+            display: block;
+        }
+        
+        /* Views for different user types */
+        .admin-view {
+            display: none;
+        }
+        
+        .driver-view {
+            display: none;
+        }
+        
+        .dispatcher-view {
+            display: none;
+        }
+        
+        .active-view {
+            display: block;
+        }
+        
+        /* QR Code Scanner */
+        .qr-scanner {
+            width: 100%;
+            height: 300px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .qr-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .qr-placeholder {
+            text-align: center;
+            color: var(--gray);
+        }
+        
+        .qr-placeholder i {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        
+        /* Delivery Proof */
+        .proof-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .proof-btn {
+            background: white;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .proof-btn:active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--secondary);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: toastSlideIn 0.3s ease-out;
+        }
+        
+        @keyframes toastSlideIn {
+            from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+        
+        .toast.success {
+            background: var(--success);
+        }
+        
+        .toast.error {
+            background: var(--danger);
+        }
+        
+        .toast.warning {
+            background: var(--warning);
+        }
+
+        /* Responsive adjustments for larger screens */
+        @media (min-width: 768px) {
+            .mobile-container {
+                max-width: 400px;
+                margin: 20px auto;
+                box-shadow: 0 0 20px rgba(0,0,0,0.1);
+                border-radius: 20px;
+                overflow: hidden;
+                min-height: 90vh;
+            }
+            
+            body {
+                background: var(--gradient);
+                padding: 20px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-logo">
+            <i class="fas fa-box"></i>
+            <span>CargoLens</span>
+        </div>
+        <div class="spinner"></div>
+        <p style="margin-top: 20px;">Initializing CargoLens...</p>
+    </div>
+    
+    <!-- Auth Pages -->
+    <div class="auth-container active-view" id="authPage">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <i class="fas fa-box"></i>
+                <span>CargoLens</span>
+            </div>
+            
+            <h2 class="auth-title" id="authTitle">Welcome to CargoLens</h2>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-mode="login">Sign In</div>
+                <div class="auth-tab" data-mode="register">Create Account</div>
+            </div>
+            
+            <form id="authForm">
+                <div id="nameFields" class="form-group" style="display: none;">
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label class="form-label" for="firstName">First Name</label>
+                            <input type="text" class="form-control" id="firstName" placeholder="First Name">
+                        </div>
+                        <div>
+                            <label class="form-label" for="lastName">Last Name</label>
+                            <input type="text" class="form-control" id="lastName" placeholder="Last Name">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="authEmail">Email</label>
+                    <input type="email" class="form-control" id="authEmail" placeholder="Enter your email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="authPassword">Password</label>
+                    <input type="password" class="form-control" id="authPassword" placeholder="Enter your password" required>
+                </div>
+
+                <div id="roleField" class="form-group" style="display: none;">
+                    <label class="form-label" for="userRole">I am a</label>
+                    <select class="form-control" id="userRole">
+                        <option value="driver">Driver</option>
+                        <option value="dispatcher">Dispatcher</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block" id="authSubmit">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span id="authSubmitText">Sign In</span>
+                </button>
+            </form>
+            
+            <div class="auth-switch">
+                <span id="authSwitchText">Don't have an account?</span>
+                <a href="#" id="authSwitchLink">Create one</a>
+            </div>
+
+            <div style="margin-top: 20px; font-size: 0.8rem; color: var(--gray);">
+                <p><strong>Demo Accounts (if you don't want to register):</strong></p>
+                <p>Try these after the Firebase block is lifted:</p>
+                <p>Admin: admin@cargolens.com / admin123</p>
+                <p>Dispatcher: dispatcher@cargolens.com / dispatch123</p>
+                <p>Driver: driver@cargolens.com / driver123</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Admin Dashboard -->
+    <div class="dashboard-container admin-view" id="adminDashboard">
+        <!-- Mobile Top Navigation -->
+        <div class="top-navbar">
+            <div class="nav-brand">
+                <i class="fas fa-box"></i>
+                <span>CargoLens</span>
+            </div>
+            <div class="nav-actions">
+                <button class="nav-btn" id="notificationsBtn">
+                    <i class="fas fa-bell"></i>
+                    <div class="notification-badge">3</div>
+                </button>
+                <div class="user-avatar" id="adminAvatar">A</div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <h1 class="page-title">Admin Dashboard</h1>
+            
+            <!-- Search Bar -->
+            <div class="search-box">
+                <i class="fas fa-search" style="color: var(--gray);"></i>
+                <input type="text" id="searchInput" placeholder="Search packages, drivers, or locations...">
+            </div>
+            
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card fade-in">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">TOTAL PACKAGES</div>
+                        <div class="stat-card-icon" style="background: var(--primary);">
+                            <i class="fas fa-box"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="totalPackages">0</div>
+                </div>
+                
+                <div class="stat-card delivered fade-in">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">DELIVERED</div>
+                        <div class="stat-card-icon" style="background: var(--success);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="deliveredPackages">0</div>
+                </div>
+                
+                <div class="stat-card pending fade-in">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">IN TRANSIT</div>
+                        <div class="stat-card-icon" style="background: var(--warning);">
+                            <i class="fas fa-shipping-fast"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="inTransitPackages">0</div>
+                </div>
+                
+                <div class="stat-card issues fade-in">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">ISSUES</div>
+                        <div class="stat-card-icon" style="background: var(--danger);">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="issuePackages">0</div>
+                </div>
+            </div>
+            
+            <!-- Charts Section -->
+            <div class="charts-section">
+                <div class="chart-card fade-in">
+                    <div class="card-header">
+                        <h2 class="card-title">Delivery Performance</h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="performanceChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card fade-in">
+                    <div class="card-header">
+                        <h2 class="card-title">Package Status</h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="statusChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Packages Table -->
+            <div class="table-card fade-in">
+                <div class="table-header">
+                    <h2 class="card-title">Recent Packages</h2>
+                    <div class="table-actions">
+                        <button class="btn btn-primary" id="addPackageBtn">
+                            <i class="fas fa-plus"></i>
+                            New Package
+                        </button>
+                        <button class="btn" id="filterBtn">
+                            <i class="fas fa-filter"></i>
+                            Filter
+                        </button>
+                    </div>
+                </div>
+                <table id="packagesTable">
+                    <thead>
+                        <tr>
+                            <th>Package ID</th>
+                            <th>Recipient</th>
+                            <th>Driver</th>
+                            <th>Drop Point</th>
+                            <th>Status</th>
+                            <th>Due Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="packagesTableBody">
+                        <!-- Table rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Driver Performance -->
+            <div class="driver-performance">
+                <div class="chart-card fade-in">
+                    <div class="card-header">
+                        <h2 class="card-title">Top Performers</h2>
+                    </div>
+                    <div class="driver-list" id="driverList">
+                        <!-- Driver cards will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="chart-card fade-in">
+                    <div class="card-header">
+                        <h2 class="card-title">Recent Activity</h2>
+                    </div>
+                    <ul class="activity-list" id="activityList">
+                        <!-- Activity items will be populated by JavaScript -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Navigation -->
+        <div class="bottom-navbar">
+            <a href="#" class="nav-item active" data-page="dashboard">
+                <i class="fas fa-home nav-icon"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-page="packages">
+                <i class="fas fa-box nav-icon"></i>
+                <span class="nav-text">Packages</span>
+            </a>
+            <a href="#" class="nav-item" data-page="drivers">
+                <i class="fas fa-users nav-icon"></i>
+                <span class="nav-text">Drivers</span>
+            </a>
+            <a href="#" class="nav-item" data-page="analytics">
+                <i class="fas fa-chart-bar nav-icon"></i>
+                <span class="nav-text">Analytics</span>
+            </a>
+            <a href="#" class="nav-item" id="logoutBtn">
+                <i class="fas fa-sign-out-alt nav-icon"></i>
+                <span class="nav-text">Logout</span>
+            </a>
+        </div>
+        
+        <!-- Floating Action Button -->
+        <div class="fab" id="quickActionFab">
+            <i class="fas fa-plus"></i>
+        </div>
+    </div>
+    
+    <!-- Dispatcher Dashboard -->
+    <div class="dashboard-container dispatcher-view" id="dispatcherDashboard">
+        <!-- Mobile Top Navigation -->
+        <div class="top-navbar">
+            <div class="nav-brand">
+                <i class="fas fa-box"></i>
+                <span>CargoLens</span>
+            </div>
+            <div class="nav-actions">
+                <button class="nav-btn" id="dispatcherNotificationsBtn">
+                    <i class="fas fa-bell"></i>
+                    <div class="notification-badge">2</div>
+                </button>
+                <div class="user-avatar" id="dispatcherAvatar">D</div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <h1 class="page-title">Dispatcher Dashboard</h1>
+            
+            <!-- Onboard Package Section -->
+            <div class="table-card fade-in" id="onboardPackageSection">
+                <div class="card-header">
+                    <h2 class="card-title">Onboard New Package</h2>
+                </div>
+                
+                <div class="qr-scanner">
+                    <div class="qr-overlay">
+                        <div class="qr-placeholder">
+                            <i class="fas fa-qrcode"></i>
+                            <p>Scan Package QR Code</p>
+                            <button class="btn btn-primary" id="manualEntryBtn" style="margin-top: 10px;">
+                                <i class="fas fa-keyboard"></i>
+                                Manual Entry
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <form id="packageOnboardingForm">
+                    <div class="form-group">
+                        <label class="form-label" for="packageId">Package ID</label>
+                        <input type="text" class="form-control" id="packageId" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="senderName">Sender Name</label>
+                        <input type="text" class="form-control" id="senderName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="senderContact">Sender Contact</label>
+                        <input type="text" class="form-control" id="senderContact" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="recipientName">Recipient Name</label>
+                        <input type="text" class="form-control" id="recipientName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="recipientContact">Recipient Contact</label>
+                        <input type="text" class="form-control" id="recipientContact" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="packageDescription">Package Description</label>
+                        <textarea class="form-control" id="packageDescription" rows="3"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-save"></i>
+                        Register Package
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Recent Onboarded Packages -->
+            <div class="table-card fade-in">
+                <div class="card-header">
+                    <h2 class="card-title">Recently Onboarded Packages</h2>
+                </div>
+                <table id="dispatcherPackagesTable">
+                    <thead>
+                        <tr>
+                            <th>Package ID</th>
+                            <th>Recipient</th>
+                            <th>Sender</th>
+                            <th>Timestamp</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dispatcherPackagesTableBody">
+                        <!-- Table rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Bottom Navigation -->
+        <div class="bottom-navbar">
+            <a href="#" class="nav-item active" data-page="dispatcher-dashboard">
+                <i class="fas fa-home nav-icon"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-page="onboard-package">
+                <i class="fas fa-qrcode nav-icon"></i>
+                <span class="nav-text">Onboard</span>
+            </a>
+            <a href="#" class="nav-item" data-page="dispatcher-packages">
+                <i class="fas fa-box nav-icon"></i>
+                <span class="nav-text">Packages</span>
+            </a>
+            <a href="#" class="nav-item" id="logoutBtnDispatcher">
+                <i class="fas fa-sign-out-alt nav-icon"></i>
+                <span class="nav-text">Logout</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Driver App -->
+    <div class="mobile-container driver-view" id="driverApp">
+        <!-- Driver Dashboard -->
+        <div class="view view-active" id="driverDashboard">
+            <div class="app-header">
+                <div class="app-title">
+                    <i class="fas fa-box"></i>
+                    <span>CargoLens Driver</span>
+                </div>
+                <div class="header-actions">
+                    <button class="header-btn" id="driverNotificationsBtn">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <div class="user-avatar" id="driverAvatar">D</div>
+                </div>
+            </div>
+            
+            <div class="app-content">
+                <div class="welcome-card">
+                    <h2 id="driverWelcome">Hello, Driver!</h2>
+                    <p>You have <span id="driverPackageCount">0</span> deliveries today</p>
+                </div>
+                
+                <div class="search-box">
+                    <i class="fas fa-search" style="color: var(--gray);"></i>
+                    <input type="text" id="driverSearchInput" placeholder="Search packages...">
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-card-title">TODAY</div>
+                            <div class="stat-card-icon" style="background: var(--primary);">
+                                <i class="fas fa-box"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" id="driverTodayCount">0</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-card-title">COMPLETED</div>
+                            <div class="stat-card-icon" style="background: var(--success);">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" id="driverCompletedCount">0</div>
+                    </div>
+                </div>
+                
+                <div class="section-title">Today's Deliveries</div>
+                
+                <div class="package-list" id="driverPackageList">
+                    <!-- Package items will be populated by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="fab" id="driverScanFab">
+                <i class="fas fa-qrcode"></i>
+            </div>
+            
+            <div class="bottom-navbar">
+                <a href="#" class="nav-item active" data-view="driverDashboard">
+                    <i class="fas fa-home nav-icon"></i>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="#" class="nav-item" data-view="driverMap">
+                    <i class="fas fa-map-marker-alt nav-icon"></i>
+                    <span class="nav-text">Map</span>
+                </a>
+                <a href="#" class="nav-item" data-view="driverCompleted">
+                    <i class="fas fa-check-circle nav-icon"></i>
+                    <span class="nav-text">Completed</span>
+                </a>
+                <a href="#" class="nav-item" data-view="driverStats">
+                    <i class="fas fa-chart-bar nav-icon"></i>
+                    <span class="nav-text">Stats</span>
+                </a>
+                <a href="#" class="nav-item" id="logoutBtnDriver">
+                    <i class="fas fa-sign-out-alt nav-icon"></i>
+                    <span class="nav-text">Logout</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Package Details View -->
+        <div class="view" id="packageDetails">
+            <div class="app-header">
+                <div class="app-title">
+                    <i class="fas fa-box"></i>
+                    <span>Package Details</span>
+                </div>
+                <div class="header-actions">
+                    <button class="header-btn" id="backBtn">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="app-content">
+                <div class="package-item">
+                    <div class="package-info">
+                        <div class="package-id" id="detailPackageId">PKG-78343</div>
+                        <div class="package-details" id="detailPackageDesc">Lusaka Office Supplies</div>
+                        <div class="package-status status-in-transit" id="detailPackageStatus">In Transit</div>
+                    </div>
+                </div>
+                
+                <div class="section-title">Recipient Information</div>
+                
+                <div class="driver-info">
+                    <div class="driver-details">
+                        <div class="driver-name" id="detailRecipientName">Mwansa Ngulube</div>
+                        <div class="driver-rating" id="detailRecipientPhone">+260 97 123 4567</div>
+                        <div class="driver-rating" id="detailRecipientAddress">123 Independence Ave, Lusaka</div>
+                        <div class="driver-rating" id="detailDropPoint">Drop Point: Point B</div>
+                    </div>
+                </div>
+                
+                <div class="section-title">Package Information</div>
+                
+                <div class="driver-info">
+                    <div class="driver-details">
+                        <div class="driver-name" id="detailSenderName">Office Supplies</div>
+                        <div class="driver-rating" id="detailPackageDescription">2 boxes of stationery</div>
+                        <div class="driver-rating" id="detailDueDate">Due by: 14:00 Today</div>
+                    </div>
+                </div>
+                
+                <div class="section-title">Delivery Proof</div>
+                
+                <div class="proof-actions">
+                    <button class="proof-btn" id="takePhotoBtn">
+                        <i class="fas fa-camera" style="font-size: 1.2rem;"></i>
+                        Take Photo
+                    </button>
+                    <button class="proof-btn" id="getSignatureBtn">
+                        <i class="fas fa-signature" style="font-size: 1.2rem;"></i>
+                        Get Signature
+                    </button>
+                </div>
+                
+                <div class="section-title">Actions</div>
+                
+                <button class="btn btn-primary btn-block" id="startDeliveryBtn">
+                    <i class="fas fa-play"></i>
+                    Start Delivery
+                </button>
+                
+                <button class="btn btn-primary btn-block" id="completeDeliveryBtn" style="margin-top: 10px; background: var(--success);">
+                    <i class="fas fa-check"></i>
+                    Mark as Delivered
+                </button>
+                
+                <button class="btn btn-primary btn-block" id="reportIssueBtn" style="margin-top: 10px; background: var(--danger);">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Report Issue
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Package Modal -->
+    <div class="modal" id="packageModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="packageModalTitle">Assign Package to Driver</h2>
+                <button class="close-btn" id="closePackageModal">&times;</button>
+            </div>
+            <form id="packageAssignmentForm">
+                <div class="form-group">
+                    <label class="form-label" for="assignPackageId">Package ID</label>
+                    <input type="text" class="form-control" id="assignPackageId" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="assignDriver">Assign Driver</label>
+                    <select class="form-control" id="assignDriver" required>
+                        <option value="">Select a driver</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="assignDropPoint">Drop Point</label>
+                    <select class="form-control" id="assignDropPoint" required>
+                        <option value="">Select drop point</option>
+                        <option value="Point A">Point A</option>
+                        <option value="Point B">Point B</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Assign Package</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase Configuration -->
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBtGrZU2HRXUsZaEWNFs3-lXgyWMezzzOg",
+            authDomain: "cargolens-fcd66.firebaseapp.com",
+            projectId: "cargolens-fcd66",
+            storageBucket: "cargolens-fcd66.firebasestorage.app",
+            messagingSenderId: "981220438640",
+            appId: "1:981220438640:web:236dc1784e9017f2463ab5"
+        };
+    </script>
+
+    <!-- Main Application Script -->
+    <script>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const storage = firebase.storage();
+
+        // Chart instances
+        let performanceChart, statusChart;
+
+        // Application state
+        let packages = [];
+        let drivers = [];
+        let activities = [];
+        let dropPoints = ['Point A', 'Point B'];
+        let currentUser = null;
+        let currentRole = null;
+        let currentDriverId = null;
+        let currentPackageDetails = null;
+        let authMode = 'login'; // 'login' or 'register'
+
+        // Toast notification function
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'}"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the application
+            initApp();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Hide loading screen after 2 seconds
+            setTimeout(() => {
+                document.getElementById('loadingScreen').style.display = 'none';
+            }, 2000);
+        });
+
+        function initApp() {
+            // Check authentication status
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    currentUser = user;
+                    // Get user role from Firestore
+                    getUserRole(user.uid);
+                    showDashboard();
+                    loadDashboardData();
+                } else {
+                    showAuthPage();
+                }
+            });
+            
+            // Load initial data
+            loadInitialData();
+        }
+
+        function getUserRole(uid) {
+            db.collection('users').doc(uid).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        currentRole = doc.data().role;
+                        updateUserAvatar();
+                    } else {
+                        // Default to driver if no role found
+                        currentRole = 'driver';
+                        currentDriverId = uid;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error getting user role:', error);
+                    currentRole = 'driver';
+                    currentDriverId = uid;
+                });
+        }
+
+        function setupEventListeners() {
+            // Auth form
+            const authForm = document.getElementById('authForm');
+            authForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (authMode === 'login') {
+                    login();
+                } else {
+                    register();
+                }
+            });
+            
+            // Auth tabs
+            const authTabs = document.querySelectorAll('.auth-tab');
+            authTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    authTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    setAuthMode(this.getAttribute('data-mode'));
+                });
+            });
+            
+            // Auth switch link
+            const authSwitchLink = document.getElementById('authSwitchLink');
+            authSwitchLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                setAuthMode(authMode === 'login' ? 'register' : 'login');
+            });
+            
+            // Add package button
+            const addPackageBtn = document.getElementById('addPackageBtn');
+            if (addPackageBtn) {
+                addPackageBtn.addEventListener('click', function() {
+                    document.getElementById('packageModal').style.display = 'flex';
+                });
+            }
+            
+            // Close package modal
+            const closePackageModal = document.getElementById('closePackageModal');
+            if (closePackageModal) {
+                closePackageModal.addEventListener('click', function() {
+                    document.getElementById('packageModal').style.display = 'none';
+                });
+            }
+            
+            // Package assignment form
+            const packageAssignmentForm = document.getElementById('packageAssignmentForm');
+            if (packageAssignmentForm) {
+                packageAssignmentForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    assignPackage();
+                });
+            }
+            
+            // Package onboarding form
+            const packageOnboardingForm = document.getElementById('packageOnboardingForm');
+            if (packageOnboardingForm) {
+                packageOnboardingForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    onboardPackage();
+                });
+            }
+            
+            // Manual entry button
+            const manualEntryBtn = document.getElementById('manualEntryBtn');
+            if (manualEntryBtn) {
+                manualEntryBtn.addEventListener('click', function() {
+                    const packageId = 'PKG-' + Math.floor(10000 + Math.random() * 90000);
+                    document.getElementById('packageId').value = packageId;
+                    showToast(`Package ID generated: ${packageId}`);
+                });
+            }
+            
+            // Logout buttons
+            const logoutBtns = document.querySelectorAll('#logoutBtn, #logoutBtnDispatcher, #logoutBtnDriver');
+            logoutBtns.forEach(btn => {
+                if (btn) {
+                    btn.addEventListener('click', function() {
+                        logout();
+                    });
+                }
+            });
+            
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    filterPackages(searchTerm);
+                });
+            }
+            
+            // Driver search functionality
+            const driverSearchInput = document.getElementById('driverSearchInput');
+            if (driverSearchInput) {
+                driverSearchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    filterDriverPackages(searchTerm);
+                });
+            }
+            
+            // Driver action buttons
+            const startDeliveryBtn = document.getElementById('startDeliveryBtn');
+            if (startDeliveryBtn) {
+                startDeliveryBtn.addEventListener('click', function() {
+                    updatePackageStatus('in-transit');
+                });
+            }
+            
+            const completeDeliveryBtn = document.getElementById('completeDeliveryBtn');
+            if (completeDeliveryBtn) {
+                completeDeliveryBtn.addEventListener('click', function() {
+                    updatePackageStatus('delivered');
+                });
+            }
+            
+            const reportIssueBtn = document.getElementById('reportIssueBtn');
+            if (reportIssueBtn) {
+                reportIssueBtn.addEventListener('click', function() {
+                    updatePackageStatus('failed');
+                });
+            }
+            
+            // Proof of delivery buttons
+            const takePhotoBtn = document.getElementById('takePhotoBtn');
+            if (takePhotoBtn) {
+                takePhotoBtn.addEventListener('click', function() {
+                    simulatePhotoCapture();
+                });
+            }
+            
+            const getSignatureBtn = document.getElementById('getSignatureBtn');
+            if (getSignatureBtn) {
+                getSignatureBtn.addEventListener('click', function() {
+                    simulateSignatureCapture();
+                });
+            }
+            
+            // Back button in driver app
+            const backBtn = document.getElementById('backBtn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function() {
+                    document.getElementById('packageDetails').classList.remove('view-active');
+                    document.getElementById('driverDashboard').classList.add('view-active');
+                });
+            }
+            
+            // Package item clicks in driver app
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.package-item')) {
+                    const packageItem = e.target.closest('.package-item');
+                    const packageId = packageItem.getAttribute('data-package');
+                    showPackageDetails(packageId);
+                }
+            });
+        }
+
+        function setAuthMode(mode) {
+            authMode = mode;
+            const authTitle = document.getElementById('authTitle');
+            const authSubmitText = document.getElementById('authSubmitText');
+            const authSwitchText = document.getElementById('authSwitchText');
+            const authSwitchLink = document.getElementById('authSwitchLink');
+            const nameFields = document.getElementById('nameFields');
+            const roleField = document.getElementById('roleField');
+
+            if (mode === 'login') {
+                authTitle.textContent = 'Welcome to CargoLens';
+                authSubmitText.textContent = 'Sign In';
+                authSwitchText.textContent = "Don't have an account?";
+                authSwitchLink.textContent = 'Create one';
+                nameFields.style.display = 'none';
+                roleField.style.display = 'none';
+            } else {
+                authTitle.textContent = 'Create Account';
+                authSubmitText.textContent = 'Create Account';
+                authSwitchText.textContent = "Already have an account?";
+                authSwitchLink.textContent = 'Sign in';
+                nameFields.style.display = 'block';
+                roleField.style.display = 'block';
+            }
+        }
+
+        function showAuthPage() {
+            document.getElementById('authPage').classList.add('active-view');
+            document.getElementById('adminDashboard').classList.remove('active-view');
+            document.getElementById('dispatcherDashboard').classList.remove('active-view');
+            document.getElementById('driverApp').classList.remove('active-view');
+        }
+
+        function showDashboard() {
+            document.getElementById('authPage').classList.remove('active-view');
+            
+            if (currentRole === 'admin') {
+                showAdminDashboard();
+            } else if (currentRole === 'dispatcher') {
+                showDispatcherDashboard();
+            } else {
+                showDriverApp();
+            }
+        }
+
+        function showAdminDashboard() {
+            document.getElementById('adminDashboard').classList.add('active-view');
+            document.getElementById('dispatcherDashboard').classList.remove('active-view');
+            document.getElementById('driverApp').classList.remove('active-view');
+            currentRole = 'admin';
+        }
+
+        function showDispatcherDashboard() {
+            document.getElementById('adminDashboard').classList.remove('active-view');
+            document.getElementById('dispatcherDashboard').classList.add('active-view');
+            document.getElementById('driverApp').classList.remove('active-view');
+            currentRole = 'dispatcher';
+        }
+
+        function showDriverApp() {
+            document.getElementById('adminDashboard').classList.remove('active-view');
+            document.getElementById('dispatcherDashboard').classList.remove('active-view');
+            document.getElementById('driverApp').classList.add('active-view');
+            currentRole = 'driver';
+            
+            // Update driver welcome message
+            const driver = drivers.find(d => d.id === currentDriverId);
+            if (driver) {
+                document.getElementById('driverWelcome').textContent = `Hello, ${driver.name}!`;
+            } else if (currentUser) {
+                document.getElementById('driverWelcome').textContent = `Hello, ${currentUser.displayName || 'Driver'}!`;
+            }
+        }
+
+        function updateUserAvatar() {
+            const adminAvatar = document.getElementById('adminAvatar');
+            const dispatcherAvatar = document.getElementById('dispatcherAvatar');
+            const driverAvatar = document.getElementById('driverAvatar');
+            
+            const initial = currentUser ? (currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : currentUser.email.charAt(0).toUpperCase()) : 'U';
+            
+            if (adminAvatar) adminAvatar.textContent = initial;
+            if (dispatcherAvatar) dispatcherAvatar.textContent = initial;
+            if (driverAvatar) driverAvatar.textContent = initial;
+        }
+
+        function register() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const role = document.getElementById('userRole').value;
+
+            if (!firstName || !lastName) {
+                showToast('Please enter your name', 'error');
+                return;
+            }
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Signed up successfully
+                    const user = userCredential.user;
+                    
+                    // Update user profile
+                    return user.updateProfile({
+                        displayName: `${firstName} ${lastName}`
+                    }).then(() => {
+                        // Save user role to Firestore
+                        return db.collection('users').doc(user.uid).set({
+                            email: email,
+                            firstName: firstName,
+                            lastName: lastName,
+                            role: role,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                })
+                .then(() => {
+                    showToast('Account created successfully!', 'success');
+                    currentUser = auth.currentUser;
+                    currentRole = role;
+                    
+                    // If user registered as driver, create driver profile
+                    if (role === 'driver') {
+                        return db.collection('drivers').doc(currentUser.uid).set({
+                            id: currentUser.uid,
+                            name: `${firstName} ${lastName}`,
+                            email: email,
+                            phone: '',
+                            vehicle: '',
+                            rating: 5.0,
+                            deliveryCount: 0,
+                            status: 'active'
+                        });
+                    }
+                })
+                .then(() => {
+                    showDashboard();
+                })
+                .catch((error) => {
+                    let errorMessage = 'Registration failed: ';
+                    switch (error.code) {
+                        case 'auth/email-already-in-use':
+                            errorMessage += 'Email already in use';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage += 'Invalid email address';
+                            break;
+                        case 'auth/weak-password':
+                            errorMessage += 'Password is too weak';
+                            break;
+                        case 'auth/too-many-requests':
+                            errorMessage += 'Too many attempts. Please try again later';
+                            break;
+                        default:
+                            errorMessage += error.message;
+                    }
+                    showToast(errorMessage, 'error');
+                });
+        }
+
+        function login() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Signed in successfully
+                    currentUser = userCredential.user;
+                    showToast('Login successful!', 'success');
+                })
+                .catch((error) => {
+                    let errorMessage = 'Login failed: ';
+                    switch (error.code) {
+                        case 'auth/user-not-found':
+                            errorMessage += 'No account found with this email';
+                            break;
+                        case 'auth/wrong-password':
+                            errorMessage += 'Incorrect password';
+                            break;
+                        case 'auth/invalid-email':
+                            errorMessage += 'Invalid email address';
+                            break;
+                        case 'auth/too-many-requests':
+                            errorMessage += 'Too many failed attempts. Please try again later or create a new account';
+                            break;
+                        default:
+                            errorMessage += error.message;
+                    }
+                    showToast(errorMessage, 'error');
+                });
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                currentUser = null;
+                currentRole = null;
+                showAuthPage();
+                showToast('Logged out successfully', 'success');
+            });
+        }
+
+        // ... (rest of the functions remain the same as previous version)
+
+        // Initialize with some sample data if database is empty
+        function initializeSampleData() {
+            // Check if we have any packages
+            db.collection('packages').get().then(snapshot => {
+                if (snapshot.empty) {
+                    // Add sample drivers first
+                    const sampleDrivers = [
+                        {
+                            id: 'sample-driver-1',
+                            name: 'Chanda Banda',
+                            email: 'chanda@cargolens.com',
+                            phone: '+260 97 123 4567',
+                            vehicle: 'Toyota Hilux',
+                            rating: 4.9,
+                            deliveryCount: 142,
+                            status: 'active'
+                        },
+                        {
+                            id: 'sample-driver-2',
+                            name: 'Mwila Tembo',
+                            email: 'mwila@cargolens.com',
+                            phone: '+260 96 234 5678',
+                            vehicle: 'Nissan Navara',
+                            rating: 4.6,
+                            deliveryCount: 128,
+                            status: 'active'
+                        }
+                    ];
+
+                    // Add drivers to Firestore
+                    sampleDrivers.forEach(driver => {
+                        db.collection('drivers').doc(driver.id).set(driver);
+                    });
+
+                    // Add sample packages
+                    const samplePackages = [
+                        {
+                            id: 'PKG-78342',
+                            senderName: 'Lusaka Office Supplies',
+                            senderContact: '+260 21 123 456',
+                            recipientName: 'Nchimunya Mwamba',
+                            recipientContact: '+260 97 123 4567',
+                            recipientAddress: '123 Independence Ave, Lusaka',
+                            packageDescription: '2 boxes of stationery',
+                            status: 'delivered',
+                            driverId: 'sample-driver-1',
+                            driverName: 'Chanda Banda',
+                            dropPoint: 'Point A',
+                            createdAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 2 * 60 * 60 * 1000)),
+                            dueDate: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 1 * 60 * 60 * 1000)),
+                            deliveredAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 30 * 60 * 1000))
+                        },
+                        {
+                            id: 'PKG-78343',
+                            senderName: 'Tech Solutions Ltd',
+                            senderContact: '+260 21 234 567',
+                            recipientName: 'Mwansa Ngulube',
+                            recipientContact: '+260 97 234 5678',
+                            recipientAddress: '45 Cairo Road, Lusaka',
+                            packageDescription: 'Laptop and accessories',
+                            status: 'in-transit',
+                            driverId: 'sample-driver-2',
+                            driverName: 'Mwila Tembo',
+                            dropPoint: 'Point B',
+                            createdAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 90 * 60 * 1000)),
+                            dueDate: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 2 * 60 * 60 * 1000)),
+                            inTransitAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 30 * 60 * 1000))
+                        },
+                        {
+                            id: 'PKG-78344',
+                            senderName: 'Global Imports',
+                            senderContact: '+260 21 345 678',
+                            recipientName: 'Brian Lungu',
+                            recipientContact: '+260 97 345 6789',
+                            recipientAddress: '78 Lumumba Rd, Lusaka',
+                            packageDescription: 'Document envelope',
+                            status: 'pending',
+                            createdAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 30 * 60 * 1000)),
+                            dueDate: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000))
+                        }
+                    ];
+                    
+                    // Add sample packages to Firebase
+                    samplePackages.forEach(pkg => {
+                        db.collection('packages').doc(pkg.id).set(pkg);
+                    });
+                    
+                    showToast('Sample data initialized!', 'success');
+                }
+            });
+        }
+
+        // Call this function to initialize sample data (uncomment to use)
+        // initializeSampleData();
+
+        // Note: The remaining functions (loadInitialData, updateAllDisplays, etc.)
+        // remain exactly the same as in the previous version
+        // They are omitted here for brevity but should be included in the actual implementation
+    </script>
+</body>
+</html>
