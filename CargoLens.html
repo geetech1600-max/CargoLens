@@ -3,37 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CargoLens - Package Tracking</title>
+    <title>CargoLens - GeeTech Package Tracking</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <!-- QR Scanner Library -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    
+    <!-- Leaflet for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <style>
         :root {
-            --primary: #3498db;
-            --primary-light: #5dade2;
-            --primary-dark: #2980b9;
-            --secondary: #2c3e50;
-            --secondary-light: #34495e;
-            --success: #2ecc71;
-            --success-light: #58d68d;
-            --warning: #f39c12;
-            --warning-light: #f7dc6f;
-            --danger: #e74c3c;
-            --danger-light: #ec7063;
-            --light: #ecf0f1;
-            --dark: #2c3e50;
-            --gray: #95a5a6;
-            --gradient: linear-gradient(135deg, #3498db, #2c3e50);
-            --gradient-light: linear-gradient(135deg, #5dade2, #34495e);
+            --primary: #8B4513;
+            --primary-light: #A0522D;
+            --primary-dark: #654321;
+            --secondary: #2F4F4F;
+            --secondary-light: #708090;
+            --success: #228B22;
+            --success-light: #32CD32;
+            --warning: #DAA520;
+            --warning-light: #F0E68C;
+            --danger: #B22222;
+            --danger-light: #CD5C5C;
+            --light: #F5F5F5;
+            --dark: #2F4F4F;
+            --gray: #A9A9A9;
+            --gradient: linear-gradient(135deg, #8B4513, #2F4F4F);
+            --gradient-light: linear-gradient(135deg, #A0522D, #708090);
         }
         
         * {
@@ -44,7 +45,7 @@
         }
         
         body {
-            background-color: #f5f7fa;
+            background-color: #f8f8f8;
             color: #333;
             line-height: 1.6;
             overflow-x: hidden;
@@ -90,13 +91,23 @@
         
         /* Auth Pages */
         .auth-container {
-            display: flex;
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             background: var(--gradient);
             padding: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+        }
+        
+        .auth-container.active-view {
+            display: flex;
         }
         
         .auth-card {
@@ -173,7 +184,7 @@
         .form-control:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.2);
         }
         
         .btn {
@@ -216,14 +227,51 @@
             font-weight: 500;
         }
 
+        .demo-accounts {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: left;
+        }
+        
+        .demo-accounts h4 {
+            margin-bottom: 10px;
+            color: var(--secondary);
+        }
+        
+        .demo-account {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .demo-account:hover {
+            background: var(--primary-light);
+            color: white;
+        }
+        
+        .demo-account:last-child {
+            margin-bottom: 0;
+        }
+
         /* Dashboard Layout */
         .dashboard-container {
-            display: flex;
+            display: none;
             flex-direction: column;
             min-height: 100vh;
         }
         
-        /* Top Navigation Bar - Mobile Optimized */
+        .dashboard-container.active-view {
+            display: flex;
+        }
+        
+        /* Top Navigation Bar */
         .top-navbar {
             background: var(--gradient);
             color: white;
@@ -232,9 +280,6 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
         }
         
         .nav-brand {
@@ -243,41 +288,6 @@
             gap: 10px;
             font-size: 1.2rem;
             font-weight: 600;
-        }
-        
-        .nav-brand i {
-            animation: pulse 2s infinite;
-        }
-        
-        .nav-actions {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-        
-        .nav-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-            position: relative;
-            cursor: pointer;
-        }
-        
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: var(--danger);
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.6rem;
-            font-weight: bold;
         }
         
         .user-avatar {
@@ -290,55 +300,19 @@
             justify-content: center;
             color: white;
             font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        
-        /* Bottom Navigation - Mobile Optimized */
-        .bottom-navbar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
+
+        .nav-actions {
             display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
-        
-        .nav-item {
-            display: flex;
-            flex-direction: column;
+            gap: 15px;
             align-items: center;
-            gap: 5px;
-            text-decoration: none;
-            color: var(--gray);
-            transition: all 0.3s ease;
-            padding: 5px 10px;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            position: relative;
-        }
-        
-        .nav-item.active {
-            color: var(--primary);
-        }
-        
-        .nav-item:active {
-            background: #f8f9fa;
-        }
-        
-        .nav-icon {
-            font-size: 1.2rem;
         }
         
         /* Main Content */
         .main-content {
             flex: 1;
-            padding: 15px;
-            padding-bottom: 80px; /* Space for bottom nav */
-            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 80px; /* Space for bottom navbar */
         }
         
         .page-title {
@@ -351,7 +325,7 @@
         /* Stats Cards */
         .stats-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -364,35 +338,6 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: var(--gradient);
-        }
-        
-        .stat-card:active {
-            transform: scale(0.98);
-        }
-        
-        .stat-card.delivered::before {
-            background: var(--success);
-        }
-        
-        .stat-card.pending::before {
-            background: var(--warning);
-        }
-        
-        .stat-card.issues::before {
-            background: var(--danger);
         }
         
         .stat-card-header {
@@ -415,7 +360,7 @@
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 0.9rem;
+            background: var(--primary);
         }
         
         .stat-card-value {
@@ -423,50 +368,12 @@
             font-weight: bold;
             color: var(--secondary);
         }
-        
-        /* Charts Section */
-        .charts-section {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .chart-card {
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-        }
-        
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .card-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--secondary);
-        }
-        
-        .chart-container {
-            height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        
+
         /* Tables */
         .table-card {
             background: white;
             border-radius: 12px;
-            padding: 15px;
+            padding: 20px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.08);
             margin-bottom: 20px;
             overflow-x: auto;
@@ -479,59 +386,32 @@
             margin-bottom: 15px;
         }
         
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
         .table-actions {
             display: flex;
             gap: 10px;
         }
         
-        .btn {
-            padding: 8px 12px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.8rem;
-        }
-        
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-        
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-        
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 600px;
         }
         
         th, td {
             padding: 12px 10px;
             text-align: left;
             border-bottom: 1px solid #eee;
-            font-size: 0.8rem;
         }
         
         th {
             background: #f8f9fa;
             font-weight: 600;
             color: var(--secondary);
-        }
-        
-        tr:last-child td {
-            border-bottom: none;
-        }
-        
-        tr:active {
-            background: #f8f9fa;
         }
         
         .status-badge {
@@ -560,13 +440,95 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+
+        /* Charts */
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
         
+        .chart-container {
+            height: 300px;
+            margin-top: 15px;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .action-icon {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        /* Package List */
+        .package-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .package-item {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .package-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .package-info {
+            flex: 1;
+        }
+        
+        .package-id {
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+        
+        .package-details {
+            font-size: 0.8rem;
+            color: var(--gray);
+            margin-top: 3px;
+        }
+
         /* Driver Performance */
         .driver-performance {
             display: flex;
             flex-direction: column;
             gap: 15px;
-            margin-bottom: 20px;
         }
         
         .driver-card {
@@ -628,332 +590,8 @@
             background: var(--success);
             border-radius: 3px;
         }
-        
-        /* Recent Activity */
-        .activity-list {
-            list-style: none;
-        }
-        
-        .activity-item {
-            display: flex;
-            gap: 15px;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-        
-        .activity-icon {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.9rem;
-        }
-        
-        .activity-icon.primary {
-            background: var(--primary);
-        }
-        
-        .activity-icon.success {
-            background: var(--success);
-        }
-        
-        .activity-icon.warning {
-            background: var(--warning);
-        }
-        
-        .activity-details {
-            flex: 1;
-        }
-        
-        .activity-title {
-            font-weight: 500;
-            margin-bottom: 3px;
-            font-size: 0.9rem;
-        }
-        
-        .activity-time {
-            font-size: 0.7rem;
-            color: var(--gray);
-        }
-        
-        /* Map Preview */
-        .map-preview {
-            height: 150px;
-            background: #e9ecef;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 10px;
-            color: var(--gray);
-        }
-        
-        /* Search Bar */
-        .search-box {
-            background: white;
-            border-radius: 10px;
-            padding: 10px 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .search-box input {
-            flex: 1;
-            border: none;
-            outline: none;
-            font-size: 0.9rem;
-        }
-        
-        /* Floating Action Button */
-        .fab {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            background: var(--gradient);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.5rem;
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
-            z-index: 90;
-            animation: bounce 2s infinite;
-            cursor: pointer;
-        }
-        
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        
-        .modal-content {
-            background-color: white;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 500px;
-            padding: 20px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        
-        .modal-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--secondary);
-        }
-        
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--gray);
-        }
-        
-        /* Animations */
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-        
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-        
-        /* Driver App Styles */
-        .mobile-container {
-            max-width: 100%;
-            margin: 0 auto;
-            background: white;
-            min-height: 100vh;
-            position: relative;
-            overflow-x: hidden;
-        }
-        
-        /* App Header */
-        .app-header {
-            background: var(--gradient);
-            color: white;
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        
-        .app-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-        
-        .header-actions {
-            display: flex;
-            gap: 15px;
-        }
-        
-        .header-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-        }
-        
-        /* App Content */
-        .app-content {
-            padding: 15px;
-            animation: fadeIn 0.5s ease-out;
-            padding-bottom: 80px; /* Space for bottom nav */
-        }
-        
-        /* Welcome Card */
-        .welcome-card {
-            background: var(--gradient);
-            color: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
-            animation: slideInLeft 0.6s ease-out;
-        }
-        
-        @keyframes slideInLeft {
-            from { transform: translateX(-20px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .welcome-card h2 {
-            font-size: 1.3rem;
-            margin-bottom: 5px;
-        }
-        
-        .welcome-card p {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-        
-        /* Package List */
-        .package-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .package-item {
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s ease;
-            animation: slideInRight 0.5s ease-out;
-        }
-        
-        @keyframes slideInRight {
-            from { transform: translateX(20px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .package-item:active {
-            transform: scale(0.98);
-            background: #f8f9fa;
-        }
-        
-        .package-info {
-            flex: 1;
-        }
-        
-        .package-id {
-            font-family: monospace;
-            font-weight: bold;
-            color: var(--secondary);
-            font-size: 0.9rem;
-        }
-        
-        .package-details {
-            font-size: 0.8rem;
-            color: var(--gray);
-            margin-top: 3px;
-        }
-        
-        /* Views */
-        .view {
-            display: none;
-        }
-        
-        .view-active {
-            display: block;
-        }
-        
-        /* Views for different user types */
-        .admin-view {
-            display: none;
-        }
-        
-        .driver-view {
-            display: none;
-        }
-        
-        .dispatcher-view {
-            display: none;
-        }
-        
-        .active-view {
-            display: block;
-        }
-        
-        /* QR Code Scanner */
+
+        /* QR Scanner */
         .qr-scanner {
             width: 100%;
             height: 300px;
@@ -989,8 +627,8 @@
             font-size: 3rem;
             margin-bottom: 10px;
         }
-        
-        /* Delivery Proof */
+
+        /* Proof Actions */
         .proof-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1013,15 +651,60 @@
             cursor: pointer;
         }
         
-        .proof-btn:active {
+        .proof-btn:hover {
             background: var(--primary);
             color: white;
         }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
         
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray);
+        }
+
         /* Toast Notifications */
         .toast {
             position: fixed;
-            bottom: 100px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             background: var(--secondary);
@@ -1033,12 +716,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            animation: toastSlideIn 0.3s ease-out;
-        }
-        
-        @keyframes toastSlideIn {
-            from { transform: translateX(-50%) translateY(20px); opacity: 0; }
-            to { transform: translateX(-50%) translateY(0); opacity: 1; }
         }
         
         .toast.success {
@@ -1048,25 +725,218 @@
         .toast.error {
             background: var(--danger);
         }
+
+        /* Bottom Navigation */
+        .bottom-navbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
         
-        .toast.warning {
-            background: var(--warning);
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            color: var(--gray);
+            transition: all 0.3s ease;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+        }
+        
+        .nav-icon {
+            font-size: 1.2rem;
         }
 
-        /* Responsive adjustments for larger screens */
-        @media (min-width: 768px) {
-            .mobile-container {
-                max-width: 400px;
-                margin: 20px auto;
-                box-shadow: 0 0 20px rgba(0,0,0,0.1);
-                border-radius: 20px;
-                overflow: hidden;
-                min-height: 90vh;
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: var(--gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.4);
+            z-index: 90;
+            cursor: pointer;
+        }
+
+        /* Map Container */
+        .map-container {
+            height: 400px;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        /* QR Scanner Active */
+        .qr-scanner-active {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+        
+        #qr-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .qr-overlay-active {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .scanner-frame {
+            width: 200px;
+            height: 200px;
+            border: 3px solid var(--primary);
+            border-radius: 12px;
+            position: relative;
+        }
+        
+        .scanner-frame::before,
+        .scanner-frame::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--primary);
+        }
+        
+        .scanner-frame::before {
+            top: -3px;
+            left: -3px;
+            border-right: none;
+            border-bottom: none;
+        }
+        
+        .scanner-frame::after {
+            bottom: -3px;
+            right: -3px;
+            border-left: none;
+            border-top: none;
+        }
+        
+        /* Signature Pad */
+        .signature-pad-container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            margin: 15px 0;
+        }
+        
+        .signature-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        /* Camera Preview */
+        .camera-preview {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        /* Live Tracking */
+        .live-tracking-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+        }
+        
+        .driver-location {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .location-active {
+            color: var(--success);
+        }
+        
+        .location-inactive {
+            color: var(--gray);
+        }
+        
+        /* Enhanced Modal Styles */
+        .modal-lg {
+            max-width: 800px;
+        }
+        
+        /* Driver Views */
+        .driver-view {
+            display: none;
+        }
+        
+        .driver-view.active {
+            display: block;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
             
-            body {
-                background: var(--gradient);
-                padding: 20px 0;
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .table-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+            
+            .map-container {
+                height: 300px;
+            }
+            
+            .qr-scanner-active {
+                height: 250px;
+            }
+            
+            .scanner-frame {
+                width: 150px;
+                height: 150px;
             }
         }
     </style>
@@ -1141,119 +1011,146 @@
                 <a href="#" id="authSwitchLink">Create one</a>
             </div>
 
-            <div style="margin-top: 20px; font-size: 0.8rem; color: var(--gray);">
-                <p><strong>Demo Accounts (if you don't want to register):</strong></p>
-                <p>Try these after the Firebase block is lifted:</p>
-                <p>Admin: admin@cargolens.com / admin123</p>
-                <p>Dispatcher: dispatcher@cargolens.com / dispatch123</p>
-                <p>Driver: driver@cargolens.com / driver123</p>
+            <div class="demo-accounts">
+                <h4>Demo Accounts (Click to use):</h4>
+                <div class="demo-account" data-email="admin@cargolens.com" data-password="admin123" data-role="admin">
+                    <span>Admin</span>
+                    <span>admin@cargolens.com / admin123</span>
+                </div>
+                <div class="demo-account" data-email="dispatcher@cargolens.com" data-password="dispatch123" data-role="dispatcher">
+                    <span>Dispatcher</span>
+                    <span>dispatcher@cargolens.com / dispatch123</span>
+                </div>
+                <div class="demo-account" data-email="driver@cargolens.com" data-password="driver123" data-role="driver">
+                    <span>Driver</span>
+                    <span>driver@cargolens.com / driver123</span>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Admin Dashboard -->
-    <div class="dashboard-container admin-view" id="adminDashboard">
-        <!-- Mobile Top Navigation -->
+    <div class="dashboard-container" id="adminDashboard">
         <div class="top-navbar">
             <div class="nav-brand">
                 <i class="fas fa-box"></i>
-                <span>CargoLens</span>
+                <span>CargoLens Admin Dashboard</span>
             </div>
             <div class="nav-actions">
-                <button class="nav-btn" id="notificationsBtn">
-                    <i class="fas fa-bell"></i>
-                    <div class="notification-badge">3</div>
-                </button>
                 <div class="user-avatar" id="adminAvatar">A</div>
+                <button class="btn" id="logoutBtn" style="background: transparent; color: white;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
             </div>
         </div>
         
-        <!-- Main Content -->
         <div class="main-content">
-            <h1 class="page-title">Admin Dashboard</h1>
+            <h1 class="page-title">Dashboard Overview</h1>
             
-            <!-- Search Bar -->
-            <div class="search-box">
-                <i class="fas fa-search" style="color: var(--gray);"></i>
-                <input type="text" id="searchInput" placeholder="Search packages, drivers, or locations...">
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <div class="action-card" id="addPackageBtn">
+                    <div class="action-icon">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    <h3>Add Package</h3>
+                    <p>Create new shipment</p>
+                </div>
+                <div class="action-card" id="assignDriverBtn">
+                    <div class="action-icon">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <h3>Assign Driver</h3>
+                    <p>Assign packages to drivers</p>
+                </div>
+                <div class="action-card" id="trackPackageBtn">
+                    <div class="action-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <h3>Track Package</h3>
+                    <p>Real-time tracking</p>
+                </div>
+                <div class="action-card" id="generateReportBtn">
+                    <div class="action-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3>Reports</h3>
+                    <p>Generate analytics</p>
+                </div>
             </div>
             
             <!-- Stats Cards -->
             <div class="stats-grid">
-                <div class="stat-card fade-in">
+                <div class="stat-card">
                     <div class="stat-card-header">
                         <div class="stat-card-title">TOTAL PACKAGES</div>
-                        <div class="stat-card-icon" style="background: var(--primary);">
+                        <div class="stat-card-icon">
                             <i class="fas fa-box"></i>
                         </div>
                     </div>
-                    <div class="stat-card-value" id="totalPackages">0</div>
+                    <div class="stat-card-value" id="totalPackages">156</div>
                 </div>
                 
-                <div class="stat-card delivered fade-in">
+                <div class="stat-card">
                     <div class="stat-card-header">
                         <div class="stat-card-title">DELIVERED</div>
                         <div class="stat-card-icon" style="background: var(--success);">
                             <i class="fas fa-check-circle"></i>
                         </div>
                     </div>
-                    <div class="stat-card-value" id="deliveredPackages">0</div>
+                    <div class="stat-card-value" id="deliveredPackages">128</div>
                 </div>
                 
-                <div class="stat-card pending fade-in">
+                <div class="stat-card">
                     <div class="stat-card-header">
                         <div class="stat-card-title">IN TRANSIT</div>
                         <div class="stat-card-icon" style="background: var(--warning);">
                             <i class="fas fa-shipping-fast"></i>
                         </div>
                     </div>
-                    <div class="stat-card-value" id="inTransitPackages">0</div>
+                    <div class="stat-card-value" id="inTransitPackages">24</div>
                 </div>
                 
-                <div class="stat-card issues fade-in">
+                <div class="stat-card">
                     <div class="stat-card-header">
-                        <div class="stat-card-title">ISSUES</div>
+                        <div class="stat-card-title">PENDING</div>
                         <div class="stat-card-icon" style="background: var(--danger);">
-                            <i class="fas fa-exclamation-triangle"></i>
+                            <i class="fas fa-clock"></i>
                         </div>
                     </div>
-                    <div class="stat-card-value" id="issuePackages">0</div>
+                    <div class="stat-card-value" id="pendingPackages">4</div>
                 </div>
             </div>
             
             <!-- Charts Section -->
-            <div class="charts-section">
-                <div class="chart-card fade-in">
-                    <div class="card-header">
-                        <h2 class="card-title">Delivery Performance</h2>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="performanceChart" width="400" height="200"></canvas>
+            <div class="chart-card">
+                <div class="table-header">
+                    <h2 class="card-title">Delivery Performance</h2>
+                    <div class="table-actions">
+                        <button class="btn" id="refreshChartBtn">
+                            <i class="fas fa-sync-alt"></i>
+                            Refresh
+                        </button>
                     </div>
                 </div>
-                
-                <div class="chart-card fade-in">
-                    <div class="card-header">
-                        <h2 class="card-title">Package Status</h2>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="statusChart" width="400" height="200"></canvas>
-                    </div>
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
                 </div>
             </div>
             
             <!-- Recent Packages Table -->
-            <div class="table-card fade-in">
+            <div class="table-card">
                 <div class="table-header">
                     <h2 class="card-title">Recent Packages</h2>
                     <div class="table-actions">
-                        <button class="btn btn-primary" id="addPackageBtn">
-                            <i class="fas fa-plus"></i>
-                            New Package
+                        <button class="btn btn-primary" id="viewAllPackagesBtn">
+                            <i class="fas fa-list"></i>
+                            View All
                         </button>
-                        <button class="btn" id="filterBtn">
-                            <i class="fas fa-filter"></i>
-                            Filter
+                        <button class="btn" id="exportDataBtn">
+                            <i class="fas fa-download"></i>
+                            Export
                         </button>
                     </div>
                 </div>
@@ -1263,103 +1160,156 @@
                             <th>Package ID</th>
                             <th>Recipient</th>
                             <th>Driver</th>
-                            <th>Drop Point</th>
+                            <th>Location</th>
                             <th>Status</th>
                             <th>Due Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="packagesTableBody">
-                        <!-- Table rows will be populated by JavaScript -->
+                        <!-- Packages will be populated by JavaScript -->
                     </tbody>
                 </table>
             </div>
             
             <!-- Driver Performance -->
-            <div class="driver-performance">
-                <div class="chart-card fade-in">
-                    <div class="card-header">
-                        <h2 class="card-title">Top Performers</h2>
-                    </div>
-                    <div class="driver-list" id="driverList">
-                        <!-- Driver cards will be populated by JavaScript -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h2 class="card-title">Top Drivers</h2>
+                    <div class="table-actions">
+                        <button class="btn" id="manageDriversBtn">
+                            <i class="fas fa-users"></i>
+                            Manage Drivers
+                        </button>
                     </div>
                 </div>
-                
-                <!-- Recent Activity -->
-                <div class="chart-card fade-in">
-                    <div class="card-header">
-                        <h2 class="card-title">Recent Activity</h2>
-                    </div>
-                    <ul class="activity-list" id="activityList">
-                        <!-- Activity items will be populated by JavaScript -->
-                    </ul>
-                </div>
+                <table id="driversTable">
+                    <thead>
+                        <tr>
+                            <th>Driver Name</th>
+                            <th>Completed Deliveries</th>
+                            <th>Success Rate</th>
+                            <th>Rating</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="driversTableBody">
+                        <!-- Drivers will be populated by JavaScript -->
+                    </tbody>
+                </table>
             </div>
         </div>
-        
-        <!-- Bottom Navigation -->
-        <div class="bottom-navbar">
-            <a href="#" class="nav-item active" data-page="dashboard">
-                <i class="fas fa-home nav-icon"></i>
-                <span class="nav-text">Dashboard</span>
-            </a>
-            <a href="#" class="nav-item" data-page="packages">
-                <i class="fas fa-box nav-icon"></i>
-                <span class="nav-text">Packages</span>
-            </a>
-            <a href="#" class="nav-item" data-page="drivers">
-                <i class="fas fa-users nav-icon"></i>
-                <span class="nav-text">Drivers</span>
-            </a>
-            <a href="#" class="nav-item" data-page="analytics">
-                <i class="fas fa-chart-bar nav-icon"></i>
-                <span class="nav-text">Analytics</span>
-            </a>
-            <a href="#" class="nav-item" id="logoutBtn">
-                <i class="fas fa-sign-out-alt nav-icon"></i>
-                <span class="nav-text">Logout</span>
-            </a>
-        </div>
-        
-        <!-- Floating Action Button -->
-        <div class="fab" id="quickActionFab">
-            <i class="fas fa-plus"></i>
-        </div>
     </div>
-    
+
     <!-- Dispatcher Dashboard -->
-    <div class="dashboard-container dispatcher-view" id="dispatcherDashboard">
-        <!-- Mobile Top Navigation -->
+    <div class="dashboard-container" id="dispatcherDashboard">
         <div class="top-navbar">
             <div class="nav-brand">
                 <i class="fas fa-box"></i>
-                <span>CargoLens</span>
+                <span>CargoLens Dispatcher Dashboard</span>
             </div>
             <div class="nav-actions">
-                <button class="nav-btn" id="dispatcherNotificationsBtn">
-                    <i class="fas fa-bell"></i>
-                    <div class="notification-badge">2</div>
-                </button>
                 <div class="user-avatar" id="dispatcherAvatar">D</div>
+                <button class="btn" id="logoutBtnDispatcher" style="background: transparent; color: white;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
             </div>
         </div>
         
-        <!-- Main Content -->
         <div class="main-content">
-            <h1 class="page-title">Dispatcher Dashboard</h1>
+            <h1 class="page-title">Dispatcher Control Center</h1>
             
-            <!-- Onboard Package Section -->
-            <div class="table-card fade-in" id="onboardPackageSection">
-                <div class="card-header">
-                    <h2 class="card-title">Onboard New Package</h2>
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <div class="action-card" id="dispatcherScanBtn">
+                    <div class="action-icon">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <h3>Scan Package</h3>
+                    <p>QR code scanning</p>
+                </div>
+                <div class="action-card" id="dispatcherAssignBtn">
+                    <div class="action-icon">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <h3>Assign Route</h3>
+                    <p>Optimize deliveries</p>
+                </div>
+                <div class="action-card" id="dispatcherMonitorBtn">
+                    <div class="action-icon">
+                        <i class="fas fa-map"></i>
+                    </div>
+                    <h3>Live Tracking</h3>
+                    <p>Monitor all drivers</p>
+                </div>
+                <div class="action-card" id="dispatcherAlertBtn">
+                    <div class="action-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <h3>Alerts</h3>
+                    <p>Manage notifications</p>
+                </div>
+            </div>
+            
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">ACTIVE DRIVERS</div>
+                        <div class="stat-card-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value">12</div>
                 </div>
                 
-                <div class="qr-scanner">
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">TODAY'S DELIVERIES</div>
+                        <div class="stat-card-icon" style="background: var(--success);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value">45</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">IN PROGRESS</div>
+                        <div class="stat-card-icon" style="background: var(--warning);">
+                            <i class="fas fa-shipping-fast"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value">18</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">DELAYED</div>
+                        <div class="stat-card-icon" style="background: var(--danger);">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value">3</div>
+                </div>
+            </div>
+
+            <!-- QR Scanner Section -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h2 class="card-title">Package Onboarding</h2>
+                </div>
+                
+                <div class="qr-scanner" id="qrScannerContainer">
                     <div class="qr-overlay">
                         <div class="qr-placeholder">
                             <i class="fas fa-qrcode"></i>
                             <p>Scan Package QR Code</p>
+                            <button class="btn btn-primary" id="startScannerBtn" style="margin-top: 10px;">
+                                <i class="fas fa-camera"></i>
+                                Start Scanner
+                            </button>
                             <button class="btn btn-primary" id="manualEntryBtn" style="margin-top: 10px;">
                                 <i class="fas fa-keyboard"></i>
                                 Manual Entry
@@ -1380,18 +1330,8 @@
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label" for="senderContact">Sender Contact</label>
-                        <input type="text" class="form-control" id="senderContact" required>
-                    </div>
-                    
-                    <div class="form-group">
                         <label class="form-label" for="recipientName">Recipient Name</label>
                         <input type="text" class="form-control" id="recipientName" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="recipientContact">Recipient Contact</label>
-                        <input type="text" class="form-control" id="recipientContact" required>
                     </div>
                     
                     <div class="form-group">
@@ -1406,9 +1346,25 @@
                 </form>
             </div>
             
+            <!-- Active Drivers -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h2 class="card-title">Active Drivers</h2>
+                    <div class="table-actions">
+                        <button class="btn" id="refreshDriversBtn">
+                            <i class="fas fa-sync-alt"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="driver-performance" id="activeDriversList">
+                    <!-- Driver cards will be populated by JavaScript -->
+                </div>
+            </div>
+            
             <!-- Recent Onboarded Packages -->
-            <div class="table-card fade-in">
-                <div class="card-header">
+            <div class="table-card">
+                <div class="table-header">
                     <h2 class="card-title">Recently Onboarded Packages</h2>
                 </div>
                 <table id="dispatcherPackagesTable">
@@ -1427,65 +1383,43 @@
                 </table>
             </div>
         </div>
-        
-        <!-- Bottom Navigation -->
-        <div class="bottom-navbar">
-            <a href="#" class="nav-item active" data-page="dispatcher-dashboard">
-                <i class="fas fa-home nav-icon"></i>
-                <span class="nav-text">Dashboard</span>
-            </a>
-            <a href="#" class="nav-item" data-page="onboard-package">
-                <i class="fas fa-qrcode nav-icon"></i>
-                <span class="nav-text">Onboard</span>
-            </a>
-            <a href="#" class="nav-item" data-page="dispatcher-packages">
-                <i class="fas fa-box nav-icon"></i>
-                <span class="nav-text">Packages</span>
-            </a>
-            <a href="#" class="nav-item" id="logoutBtnDispatcher">
-                <i class="fas fa-sign-out-alt nav-icon"></i>
-                <span class="nav-text">Logout</span>
-            </a>
-        </div>
     </div>
-    
-    <!-- Driver App -->
-    <div class="mobile-container driver-view" id="driverApp">
-        <!-- Driver Dashboard -->
-        <div class="view view-active" id="driverDashboard">
-            <div class="app-header">
-                <div class="app-title">
-                    <i class="fas fa-box"></i>
-                    <span>CargoLens Driver</span>
-                </div>
-                <div class="header-actions">
-                    <button class="header-btn" id="driverNotificationsBtn">
-                        <i class="fas fa-bell"></i>
-                    </button>
-                    <div class="user-avatar" id="driverAvatar">D</div>
-                </div>
+
+    <!-- Driver Dashboard -->
+    <div class="dashboard-container" id="driverDashboard">
+        <div class="top-navbar">
+            <div class="nav-brand">
+                <i class="fas fa-box"></i>
+                <span>CargoLens Driver App</span>
             </div>
-            
-            <div class="app-content">
-                <div class="welcome-card">
+            <div class="nav-actions">
+                <div class="user-avatar" id="driverAvatar">D</div>
+                <button class="btn" id="logoutBtnDriver" style="background: transparent; color: white;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- Driver Home View -->
+            <div class="driver-view active" id="driverHomeView">
+                <!-- Welcome Card -->
+                <div class="table-card" style="background: var(--gradient); color: white;">
                     <h2 id="driverWelcome">Hello, Driver!</h2>
-                    <p>You have <span id="driverPackageCount">0</span> deliveries today</p>
+                    <p>You have <strong id="driverPackageCount">5</strong> deliveries scheduled for today</p>
                 </div>
                 
-                <div class="search-box">
-                    <i class="fas fa-search" style="color: var(--gray);"></i>
-                    <input type="text" id="driverSearchInput" placeholder="Search packages...">
-                </div>
-                
+                <!-- Driver Stats -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-card-header">
-                            <div class="stat-card-title">TODAY</div>
-                            <div class="stat-card-icon" style="background: var(--primary);">
-                                <i class="fas fa-box"></i>
+                            <div class="stat-card-title">TODAY'S ROUTE</div>
+                            <div class="stat-card-icon">
+                                <i class="fas fa-route"></i>
                             </div>
                         </div>
-                        <div class="stat-card-value" id="driverTodayCount">0</div>
+                        <div class="stat-card-value" id="todayRoute">8 stops</div>
                     </div>
                     
                     <div class="stat-card">
@@ -1495,114 +1429,344 @@
                                 <i class="fas fa-check-circle"></i>
                             </div>
                         </div>
-                        <div class="stat-card-value" id="driverCompletedCount">0</div>
+                        <div class="stat-card-value" id="completedToday">3</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-card-title">ON TIME RATE</div>
+                            <div class="stat-card-icon" style="background: var(--warning);">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" id="onTimeRate">96%</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <div class="stat-card-title">EARNINGS</div>
+                            <div class="stat-card-icon" style="background: var(--primary);">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" id="todayEarnings">K 1,270</div>
+                    </div>
+                </div>
+
+                <!-- Today's Deliveries -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <h2 class="card-title">Today's Deliveries</h2>
+                        <div class="table-actions">
+                            <button class="btn" id="startRouteBtn">
+                                <i class="fas fa-play"></i>
+                                Start Route
+                            </button>
+                        </div>
+                    </div>
+                    <div class="package-list" id="driverPackageList">
+                        <!-- Package items will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <div class="action-card" id="driverScanBtn">
+                        <div class="action-icon">
+                            <i class="fas fa-qrcode"></i>
+                        </div>
+                        <h3>Scan Package</h3>
+                        <p>QR code scanning</p>
+                    </div>
+                    <div class="action-card" id="driverMapBtn">
+                        <div class="action-icon">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <h3>Navigation</h3>
+                        <p>Get directions</p>
+                    </div>
+                    <div class="action-card" id="driverProofBtn">
+                        <div class="action-icon">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <h3>Proof</h3>
+                        <p>Delivery evidence</p>
+                    </div>
+                    <div class="action-card" id="driverSupportBtn">
+                        <div class="action-icon">
+                            <i class="fas fa-headset"></i>
+                        </div>
+                        <h3>Support</h3>
+                        <p>Get help</p>
+                    </div>
+                </div>
+
+                <!-- Performance Metrics -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <h2 class="card-title">Your Performance</h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="driverPerformanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Driver Map View -->
+            <div class="driver-view" id="driverMapView">
+                <div class="table-header">
+                    <h2 class="card-title">Delivery Map</h2>
+                    <div class="table-actions">
+                        <button class="btn" id="refreshMapBtn">
+                            <i class="fas fa-sync-alt"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="map-container" id="driverMap"></div>
+                <div class="table-card">
+                    <h3>Today's Route</h3>
+                    <div class="package-list" id="routePackageList">
+                        <!-- Route packages will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Driver History View -->
+            <div class="driver-view" id="driverHistoryView">
+                <div class="table-header">
+                    <h2 class="card-title">Delivery History</h2>
+                    <div class="table-actions">
+                        <button class="btn" id="filterHistoryBtn">
+                            <i class="fas fa-filter"></i>
+                            Filter
+                        </button>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <table id="driverHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Package ID</th>
+                                <th>Recipient</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="driverHistoryTableBody">
+                            <!-- History rows will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Driver Profile View -->
+            <div class="driver-view" id="driverProfileView">
+                <div class="table-card">
+                    <div class="table-header">
+                        <h2 class="card-title">Driver Profile</h2>
+                        <div class="table-actions">
+                            <button class="btn" id="editProfileBtn">
+                                <i class="fas fa-edit"></i>
+                                Edit
+                            </button>
+                        </div>
+                    </div>
+                    <div class="driver-card">
+                        <div class="driver-avatar" id="profileAvatar">D</div>
+                        <div class="driver-details">
+                            <div class="driver-name" id="profileName">Driver Name</div>
+                            <div class="driver-stats">
+                                <span>Driver ID: <span id="profileId">DRV-001</span></span>
+                                <span>Vehicle: <span id="profileVehicle">Toyota Hilux</span></span>
+                            </div>
+                            <div class="driver-stats">
+                                <span>Phone: <span id="profilePhone">+260 97 123 4567</span></span>
+                                <span>Email: <span id="profileEmail">driver@cargolens.com</span></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="section-title">Today's Deliveries</div>
-                
-                <div class="package-list" id="driverPackageList">
-                    <!-- Package items will be populated by JavaScript -->
+                <div class="table-card">
+                    <h3>Performance Summary</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-card-title">TOTAL DELIVERIES</div>
+                                <div class="stat-card-icon">
+                                    <i class="fas fa-box"></i>
+                                </div>
+                            </div>
+                            <div class="stat-card-value">245</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-card-title">SUCCESS RATE</div>
+                                <div class="stat-card-icon" style="background: var(--success);">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            </div>
+                            <div class="stat-card-value">97.5%</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-card-header">
+                                <div class="stat-card-title">RATING</div>
+                                <div class="stat-card-icon" style="background: var(--warning);">
+                                    <i class="fas fa-star"></i>
+                                </div>
+                            </div>
+                            <div class="stat-card-value">4.8/5</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="fab" id="driverScanFab">
-                <i class="fas fa-qrcode"></i>
-            </div>
-            
-            <div class="bottom-navbar">
-                <a href="#" class="nav-item active" data-view="driverDashboard">
-                    <i class="fas fa-home nav-icon"></i>
-                    <span class="nav-text">Home</span>
-                </a>
-                <a href="#" class="nav-item" data-view="driverMap">
-                    <i class="fas fa-map-marker-alt nav-icon"></i>
-                    <span class="nav-text">Map</span>
-                </a>
-                <a href="#" class="nav-item" data-view="driverCompleted">
-                    <i class="fas fa-check-circle nav-icon"></i>
-                    <span class="nav-text">Completed</span>
-                </a>
-                <a href="#" class="nav-item" data-view="driverStats">
-                    <i class="fas fa-chart-bar nav-icon"></i>
-                    <span class="nav-text">Stats</span>
-                </a>
-                <a href="#" class="nav-item" id="logoutBtnDriver">
-                    <i class="fas fa-sign-out-alt nav-icon"></i>
-                    <span class="nav-text">Logout</span>
-                </a>
+                
+                <div class="table-card">
+                    <h3>Settings</h3>
+                    <div class="form-group">
+                        <label class="form-label" for="notifications">Push Notifications</label>
+                        <select class="form-control" id="notifications">
+                            <option value="enabled">Enabled</option>
+                            <option value="disabled">Disabled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="locationSharing">Location Sharing</label>
+                        <select class="form-control" id="locationSharing">
+                            <option value="enabled">Enabled</option>
+                            <option value="disabled">Disabled</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-block">
+                        <i class="fas fa-save"></i>
+                        Save Settings
+                    </button>
+                </div>
             </div>
         </div>
-        
-        <!-- Package Details View -->
-        <div class="view" id="packageDetails">
-            <div class="app-header">
-                <div class="app-title">
-                    <i class="fas fa-box"></i>
-                    <span>Package Details</span>
-                </div>
-                <div class="header-actions">
-                    <button class="header-btn" id="backBtn">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-                </div>
+
+        <!-- Floating Action Button for Driver -->
+        <div class="fab" id="driverScanFab">
+            <i class="fas fa-qrcode"></i>
+        </div>
+
+        <!-- Bottom Navigation for Driver -->
+        <div class="bottom-navbar">
+            <a href="#" class="nav-item active" data-view="driverHomeView">
+                <i class="fas fa-home nav-icon"></i>
+                <span>Home</span>
+            </a>
+            <a href="#" class="nav-item" data-view="driverMapView">
+                <i class="fas fa-map-marker-alt nav-icon"></i>
+                <span>Map</span>
+            </a>
+            <a href="#" class="nav-item" data-view="driverHistoryView">
+                <i class="fas fa-history nav-icon"></i>
+                <span>History</span>
+            </a>
+            <a href="#" class="nav-item" data-view="driverProfileView">
+                <i class="fas fa-user nav-icon"></i>
+                <span>Profile</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Add Package Modal -->
+    <div class="modal" id="packageModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Package</h2>
+                <button class="close-btn" id="closePackageModal">&times;</button>
             </div>
-            
-            <div class="app-content">
-                <div class="package-item">
-                    <div class="package-info">
-                        <div class="package-id" id="detailPackageId">PKG-78343</div>
-                        <div class="package-details" id="detailPackageDesc">Lusaka Office Supplies</div>
-                        <div class="package-status status-in-transit" id="detailPackageStatus">In Transit</div>
-                    </div>
+            <form id="packageForm">
+                <div class="form-group">
+                    <label class="form-label" for="packageRecipient">Recipient Name</label>
+                    <input type="text" class="form-control" id="packageRecipient" placeholder="Enter recipient name" required>
                 </div>
-                
-                <div class="section-title">Recipient Information</div>
-                
-                <div class="driver-info">
-                    <div class="driver-details">
-                        <div class="driver-name" id="detailRecipientName">Mwansa Ngulube</div>
-                        <div class="driver-rating" id="detailRecipientPhone">+260 97 123 4567</div>
-                        <div class="driver-rating" id="detailRecipientAddress">123 Independence Ave, Lusaka</div>
-                        <div class="driver-rating" id="detailDropPoint">Drop Point: Point B</div>
-                    </div>
+                <div class="form-group">
+                    <label class="form-label" for="packageAddress">Delivery Address</label>
+                    <input type="text" class="form-control" id="packageAddress" placeholder="Enter delivery address" required>
                 </div>
-                
-                <div class="section-title">Package Information</div>
-                
-                <div class="driver-info">
-                    <div class="driver-details">
-                        <div class="driver-name" id="detailSenderName">Office Supplies</div>
-                        <div class="driver-rating" id="detailPackageDescription">2 boxes of stationery</div>
-                        <div class="driver-rating" id="detailDueDate">Due by: 14:00 Today</div>
-                    </div>
+                <div class="form-group">
+                    <label class="form-label" for="packageDescription">Package Description</label>
+                    <textarea class="form-control" id="packageDescription" placeholder="Describe the package contents" rows="3"></textarea>
                 </div>
-                
-                <div class="section-title">Delivery Proof</div>
-                
-                <div class="proof-actions">
-                    <button class="proof-btn" id="takePhotoBtn">
-                        <i class="fas fa-camera" style="font-size: 1.2rem;"></i>
-                        Take Photo
-                    </button>
-                    <button class="proof-btn" id="getSignatureBtn">
-                        <i class="fas fa-signature" style="font-size: 1.2rem;"></i>
-                        Get Signature
-                    </button>
+                <div class="form-group">
+                    <label class="form-label" for="packagePriority">Priority</label>
+                    <select class="form-control" id="packagePriority" required>
+                        <option value="standard">Standard</option>
+                        <option value="express">Express</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
                 </div>
-                
-                <div class="section-title">Actions</div>
-                
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-save"></i>
+                    Create Package
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Assign Driver Modal -->
+    <div class="modal" id="assignDriverModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Assign Driver to Package</h2>
+                <button class="close-btn" id="closeAssignModal">&times;</button>
+            </div>
+            <form id="assignDriverForm">
+                <div class="form-group">
+                    <label class="form-label" for="selectPackage">Select Package</label>
+                    <select class="form-control" id="selectPackage" required>
+                        <option value="">Choose a package</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="selectDriver">Select Driver</label>
+                    <select class="form-control" id="selectDriver" required>
+                        <option value="">Choose a driver</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-user-check"></i>
+                    Assign Driver
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Package Details Modal -->
+    <div class="modal" id="packageDetailsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Package Details</h2>
+                <button class="close-btn" id="closeDetailsModal">&times;</button>
+            </div>
+            <div id="packageDetailsContent">
+                <!-- Package details will be populated by JavaScript -->
+            </div>
+            <div class="proof-actions" style="margin-top: 20px;">
+                <button class="proof-btn" id="takePhotoBtn">
+                    <i class="fas fa-camera" style="font-size: 1.2rem;"></i>
+                    Take Photo
+                </button>
+                <button class="proof-btn" id="getSignatureBtn">
+                    <i class="fas fa-signature" style="font-size: 1.2rem;"></i>
+                    Get Signature
+                </button>
+            </div>
+            <div style="margin-top: 20px;">
                 <button class="btn btn-primary btn-block" id="startDeliveryBtn">
                     <i class="fas fa-play"></i>
                     Start Delivery
                 </button>
-                
                 <button class="btn btn-primary btn-block" id="completeDeliveryBtn" style="margin-top: 10px; background: var(--success);">
                     <i class="fas fa-check"></i>
                     Mark as Delivered
                 </button>
-                
                 <button class="btn btn-primary btn-block" id="reportIssueBtn" style="margin-top: 10px; background: var(--danger);">
                     <i class="fas fa-exclamation-triangle"></i>
                     Report Issue
@@ -1611,80 +1775,216 @@
         </div>
     </div>
 
-    <!-- Add Package Modal -->
-    <div class="modal" id="packageModal">
-        <div class="modal-content">
+    <!-- QR Scanner Modal -->
+    <div class="modal" id="qrScannerModal">
+        <div class="modal-content modal-lg">
             <div class="modal-header">
-                <h2 class="modal-title" id="packageModalTitle">Assign Package to Driver</h2>
-                <button class="close-btn" id="closePackageModal">&times;</button>
+                <h2 class="modal-title">QR Code Scanner</h2>
+                <button class="close-btn" id="closeQrScannerModal">&times;</button>
             </div>
-            <form id="packageAssignmentForm">
-                <div class="form-group">
-                    <label class="form-label" for="assignPackageId">Package ID</label>
-                    <input type="text" class="form-control" id="assignPackageId" readonly>
+            <div class="qr-scanner-active" id="qrScannerActive">
+                <video id="qr-video"></video>
+                <div class="qr-overlay-active">
+                    <div class="scanner-frame"></div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="assignDriver">Assign Driver</label>
-                    <select class="form-control" id="assignDriver" required>
-                        <option value="">Select a driver</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="assignDropPoint">Drop Point</label>
-                    <select class="form-control" id="assignDropPoint" required>
-                        <option value="">Select drop point</option>
-                        <option value="Point A">Point A</option>
-                        <option value="Point B">Point B</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">Assign Package</button>
-                </div>
-            </form>
+            </div>
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="btn" id="stopScannerBtn">
+                    <i class="fas fa-stop"></i>
+                    Stop Scanner
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Firebase Configuration -->
-    <script>
-        // Your Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBtGrZU2HRXUsZaEWNFs3-lXgyWMezzzOg",
-            authDomain: "cargolens-fcd66.firebaseapp.com",
-            projectId: "cargolens-fcd66",
-            storageBucket: "cargolens-fcd66.firebasestorage.app",
-            messagingSenderId: "981220438640",
-            appId: "1:981220438640:web:236dc1784e9017f2463ab5"
-        };
-    </script>
+    <!-- GPS Tracking Modal -->
+    <div class="modal" id="gpsTrackingModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2 class="modal-title">Live GPS Tracking - Zambia</h2>
+                <button class="close-btn" id="closeGpsModal">&times;</button>
+            </div>
+            <div class="map-container" id="trackingMap"></div>
+            <div class="live-tracking-container">
+                <h3>Active Drivers in Zambia</h3>
+                <div id="driverLocationsList">
+                    <!-- Driver locations will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Modal -->
+    <div class="modal" id="navigationModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2 class="modal-title">Navigation</h2>
+                <button class="close-btn" id="closeNavigationModal">&times;</button>
+            </div>
+            <div class="map-container" id="navigationMap"></div>
+            <div class="table-card">
+                <h3>Route Details</h3>
+                <div id="routeDetails">
+                    <!-- Route details will be populated by JavaScript -->
+                </div>
+                <button class="btn btn-primary btn-block" id="startNavigationBtn" style="margin-top: 15px;">
+                    <i class="fas fa-directions"></i>
+                    Start Navigation
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Main Application Script -->
     <script>
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
-        const storage = firebase.storage();
-
-        // Chart instances
-        let performanceChart, statusChart;
+        // Add this at the very top of your script to catch any initialization errors
+        window.addEventListener('error', function(e) {
+            console.error('Global error caught:', e.error);
+            // Force show auth page even if there are errors
+            setTimeout(() => {
+                const loadingScreen = document.getElementById('loadingScreen');
+                const authPage = document.getElementById('authPage');
+                if (loadingScreen) loadingScreen.style.display = 'none';
+                if (authPage) {
+                    authPage.style.display = 'flex';
+                    authPage.classList.add('active-view');
+                }
+            }, 100);
+        });
 
         // Application state
-        let packages = [];
-        let drivers = [];
-        let activities = [];
-        let dropPoints = ['Point A', 'Point B'];
         let currentUser = null;
         let currentRole = null;
-        let currentDriverId = null;
+        let authMode = 'login';
         let currentPackageDetails = null;
-        let authMode = 'login'; // 'login' or 'register'
+        let qrScannerActive = false;
+        let videoStream = null;
+        let trackingMap = null;
+        let driverMap = null;
+        let navigationMap = null;
+        let driverMarkers = {};
+        let locationWatchId = null;
+        let performanceChart = null;
+        let driverPerformanceChart = null;
+
+        // Zambian sample data
+        const zambianCities = [
+            'Lusaka', 'Ndola', 'Kitwe', 'Kabwe', 'Chingola', 'Mufulira', 'Livingstone', 'Luanshya', 'Chipata', 'Solwezi', 'Mazabuka', 'Chililabombwe', 'Mongu', 'Kafue', 'Choma', 'Mansa', 'Kapiri Mposhi', 'Nchelenge', 'Kasama', 'Mbala'
+        ];
+
+        const zambianNames = [
+            'Chanda', 'Bwalya', 'Mwila', 'Phiri', 'Mumba', 'Tembo', 'Soko', 'Ngoma', 'Kunda', 'Mulenga',
+            'Mwale', 'Banda', 'Mwenya', 'Shonga', 'Lungu', 'Kabwe', 'Zulu', 'Mwanza', 'Simfukwe', 'Kapembwa'
+        ];
+
+        const zambianSurnames = [
+            'Mukuka', 'Chileshe', 'Mweetwa', 'Hamududu', 'Sichone', 'Mwiinga', 'Munyenyembe', 'Mwanza', 'Mwanawina', 'Mubanga',
+            'Muleya', 'Mwanza', 'Mwanakatwe', 'Mwanawasa', 'Sata', 'Lungu', 'Hichilema', 'Banda', 'Kaunda', 'Mumba'
+        ];
+
+        // Generate Zambian sample data
+        const samplePackages = Array.from({length: 10}, (_, i) => {
+            const recipientName = `${zambianNames[Math.floor(Math.random() * zambianNames.length)]} ${zambianSurnames[Math.floor(Math.random() * zambianSurnames.length)]}`;
+            const senderName = `${zambianNames[Math.floor(Math.random() * zambianNames.length)]} ${zambianSurnames[Math.floor(Math.random() * zambianSurnames.length)]}`;
+            const city = zambianCities[Math.floor(Math.random() * zambianCities.length)];
+            const statuses = ['delivered', 'in-transit', 'pending'];
+            const status = statuses[Math.floor(Math.random() * statuses.length)];
+            
+            return {
+                id: `PKG-${String(i + 1).padStart(3, '0')}`,
+                recipient: recipientName,
+                driver: i < 7 ? `${zambianNames[Math.floor(Math.random() * zambianNames.length)]} ${zambianSurnames[Math.floor(Math.random() * zambianSurnames.length)]}` : 'Not Assigned',
+                location: city,
+                status: status,
+                dueDate: new Date(Date.now() + Math.floor(Math.random() * 7) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                sender: senderName,
+                timestamp: new Date(Date.now() - Math.floor(Math.random() * 5) * 24 * 60 * 60 * 1000).toLocaleString()
+            };
+        });
+
+        const sampleDrivers = Array.from({length: 6}, (_, i) => {
+            const name = `${zambianNames[i]} ${zambianSurnames[i]}`;
+            const vehicles = ['Toyota Hilux', 'Isuzu D-Max', 'Nissan Navara', 'Ford Ranger', 'Mitsubishi L200', 'Mahindra Scorpio'];
+            
+            return {
+                name: name,
+                deliveries: Math.floor(Math.random() * 100) + 20,
+                successRate: `${Math.floor(Math.random() * 5) + 95}%`,
+                rating: (Math.random() * 0.5 + 4.5).toFixed(1),
+                status: i < 4 ? 'active' : 'on-break',
+                vehicle: vehicles[i],
+                phone: `+260 97 ${Math.floor(Math.random() * 9000000 + 1000000)}`
+            };
+        });
+
+        const driverPackages = Array.from({length: 5}, (_, i) => {
+            const recipient = `${zambianNames[Math.floor(Math.random() * zambianNames.length)]} ${zambianSurnames[Math.floor(Math.random() * zambianSurnames.length)]}`;
+            const city = zambianCities[Math.floor(Math.random() * zambianCities.length)];
+            const address = `House ${Math.floor(Math.random() * 100) + 1}, ${city}`;
+            const statuses = ['in-transit', 'pending'];
+            const status = statuses[Math.floor(Math.random() * statuses.length)];
+            const priorities = ['standard', 'express', 'urgent'];
+            const priority = priorities[Math.floor(Math.random() * priorities.length)];
+            
+            return {
+                id: `PKG-${String(i + 10).padStart(3, '0')}`,
+                recipient: recipient,
+                address: address,
+                status: status,
+                dueTime: `${Math.floor(Math.random() * 12) + 8}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
+                priority: priority,
+                notes: i % 2 === 0 ? 'Signature required' : 'Leave at front desk'
+            };
+        });
+
+        // Zambian driver locations (approximate coordinates for major cities)
+        const zambianCityCoordinates = {
+            'Lusaka': [-15.3875, 28.3228],
+            'Ndola': [-12.9647, 28.6353],
+            'Kitwe': [-12.8133, 28.2139],
+            'Kabwe': [-14.4469, 28.4494],
+            'Chingola': [-12.5333, 27.8500],
+            'Mufulira': [-12.5500, 28.2333],
+            'Livingstone': [-17.8500, 25.8667],
+            'Luanshya': [-13.1333, 28.4000],
+            'Chipata': [-13.6333, 32.6500],
+            'Solwezi': [-12.1833, 26.4000]
+        };
+
+        // Initialize driver locations after sampleDrivers is defined
+        const driverLocations = {};
+        if (sampleDrivers && sampleDrivers.length > 0) {
+            sampleDrivers.forEach(driver => {
+                const city = zambianCities[Math.floor(Math.random() * zambianCities.length)];
+                const coordinates = zambianCityCoordinates[city];
+                
+                // FIX: Check if coordinates exist before accessing [0] and [1]
+                if (coordinates && coordinates.length >= 2) {
+                    driverLocations[driver.name] = {
+                        lat: coordinates[0] + (Math.random() - 0.5) * 0.1,
+                        lng: coordinates[1] + (Math.random() - 0.5) * 0.1,
+                        status: driver.status
+                    };
+                } else {
+                    // Fallback to Lusaka coordinates if city not found
+                    driverLocations[driver.name] = {
+                        lat: -15.3875 + (Math.random() - 0.5) * 0.1,
+                        lng: 28.3228 + (Math.random() - 0.5) * 0.1,
+                        status: driver.status
+                    };
+                }
+            });
+        }
 
         // Toast notification function
         function showToast(message, type = 'success') {
+            const existingToasts = document.querySelectorAll('.toast');
+            existingToasts.forEach(toast => toast.remove());
+            
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'}"></i>
+                <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'}"></i>
                 <span>${message}</span>
             `;
             
@@ -1695,54 +1995,48 @@
             }, 3000);
         }
 
+        // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize the application
-            initApp();
-            
-            // Setup event listeners
+            initializeApp();
             setupEventListeners();
             
-            // Hide loading screen after 2 seconds
             setTimeout(() => {
                 document.getElementById('loadingScreen').style.display = 'none';
-            }, 2000);
+                checkAuthState();
+            }, 1000);
         });
 
-        function initApp() {
-            // Check authentication status
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    currentUser = user;
-                    // Get user role from Firestore
-                    getUserRole(user.uid);
-                    showDashboard();
-                    loadDashboardData();
-                } else {
-                    showAuthPage();
-                }
-            });
-            
-            // Load initial data
-            loadInitialData();
+        function initializeApp() {
+            // Initialize maps if needed
         }
 
-        function getUserRole(uid) {
-            db.collection('users').doc(uid).get()
-                .then(doc => {
-                    if (doc.exists) {
-                        currentRole = doc.data().role;
-                        updateUserAvatar();
-                    } else {
-                        // Default to driver if no role found
-                        currentRole = 'driver';
-                        currentDriverId = uid;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error getting user role:', error);
-                    currentRole = 'driver';
-                    currentDriverId = uid;
-                });
+        function checkAuthState() {
+            const storedUser = localStorage.getItem('cargolens_user');
+            if (storedUser) {
+                const userData = JSON.parse(storedUser);
+                currentUser = userData;
+                currentRole = userData.role;
+                showDashboard();
+                initializeDashboard();
+            } else {
+                showAuthPage();
+            }
+        }
+
+        function determineUserRole(email) {
+            if (email.includes('admin')) {
+                currentRole = 'admin';
+            } else if (email.includes('dispatcher')) {
+                currentRole = 'dispatcher';
+            } else {
+                currentRole = 'driver';
+            }
+            
+            localStorage.setItem('cargolens_user', JSON.stringify({
+                email: email,
+                role: currentRole,
+                displayName: email.split('@')[0]
+            }));
         }
 
         function setupEventListeners() {
@@ -1750,11 +2044,7 @@
             const authForm = document.getElementById('authForm');
             authForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                if (authMode === 'login') {
-                    login();
-                } else {
-                    register();
-                }
+                handleAuth();
             });
             
             // Auth tabs
@@ -1774,130 +2064,241 @@
                 setAuthMode(authMode === 'login' ? 'register' : 'login');
             });
             
-            // Add package button
-            const addPackageBtn = document.getElementById('addPackageBtn');
-            if (addPackageBtn) {
-                addPackageBtn.addEventListener('click', function() {
-                    document.getElementById('packageModal').style.display = 'flex';
+            // Demo accounts
+            const demoAccounts = document.querySelectorAll('.demo-account');
+            demoAccounts.forEach(account => {
+                account.addEventListener('click', function() {
+                    const email = this.getAttribute('data-email');
+                    const password = this.getAttribute('data-password');
+                    const role = this.getAttribute('data-role');
+                    
+                    document.getElementById('authEmail').value = email;
+                    document.getElementById('authPassword').value = password;
+                    
+                    if (authMode === 'register') {
+                        document.getElementById('userRole').value = role;
+                        document.getElementById('firstName').value = role.charAt(0).toUpperCase() + role.slice(1);
+                        document.getElementById('lastName').value = 'User';
+                    }
+                    
+                    showToast(`Demo ${role} account credentials filled`, 'success');
                 });
-            }
-            
-            // Close package modal
-            const closePackageModal = document.getElementById('closePackageModal');
-            if (closePackageModal) {
-                closePackageModal.addEventListener('click', function() {
-                    document.getElementById('packageModal').style.display = 'none';
-                });
-            }
-            
-            // Package assignment form
-            const packageAssignmentForm = document.getElementById('packageAssignmentForm');
-            if (packageAssignmentForm) {
-                packageAssignmentForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    assignPackage();
-                });
-            }
-            
-            // Package onboarding form
-            const packageOnboardingForm = document.getElementById('packageOnboardingForm');
-            if (packageOnboardingForm) {
-                packageOnboardingForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    onboardPackage();
-                });
-            }
-            
-            // Manual entry button
-            const manualEntryBtn = document.getElementById('manualEntryBtn');
-            if (manualEntryBtn) {
-                manualEntryBtn.addEventListener('click', function() {
-                    const packageId = 'PKG-' + Math.floor(10000 + Math.random() * 90000);
-                    document.getElementById('packageId').value = packageId;
-                    showToast(`Package ID generated: ${packageId}`);
-                });
-            }
-            
-            // Logout buttons
-            const logoutBtns = document.querySelectorAll('#logoutBtn, #logoutBtnDispatcher, #logoutBtnDriver');
-            logoutBtns.forEach(btn => {
-                if (btn) {
-                    btn.addEventListener('click', function() {
-                        logout();
-                    });
-                }
             });
             
-            // Search functionality
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.addEventListener('input', function() {
-                    const searchTerm = this.value.toLowerCase();
-                    filterPackages(searchTerm);
-                });
-            }
-            
-            // Driver search functionality
-            const driverSearchInput = document.getElementById('driverSearchInput');
-            if (driverSearchInput) {
-                driverSearchInput.addEventListener('input', function() {
-                    const searchTerm = this.value.toLowerCase();
-                    filterDriverPackages(searchTerm);
-                });
-            }
-            
-            // Driver action buttons
-            const startDeliveryBtn = document.getElementById('startDeliveryBtn');
-            if (startDeliveryBtn) {
-                startDeliveryBtn.addEventListener('click', function() {
+            // Logout buttons
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            document.getElementById('logoutBtnDispatcher').addEventListener('click', logout);
+            document.getElementById('logoutBtnDriver').addEventListener('click', logout);
+
+            // Admin dashboard buttons
+            document.getElementById('addPackageBtn').addEventListener('click', function() {
+                showModal('packageModal');
+            });
+
+            document.getElementById('assignDriverBtn').addEventListener('click', function() {
+                populateAssignModal();
+                showModal('assignDriverModal');
+            });
+
+            document.getElementById('trackPackageBtn').addEventListener('click', function() {
+                showGpsTrackingModal();
+            });
+
+            document.getElementById('generateReportBtn').addEventListener('click', function() {
+                generateReport();
+            });
+
+            document.getElementById('viewAllPackagesBtn').addEventListener('click', function() {
+                showToast('Loading all packages...', 'success');
+            });
+
+            document.getElementById('exportDataBtn').addEventListener('click', function() {
+                exportData();
+            });
+
+            document.getElementById('manageDriversBtn').addEventListener('click', function() {
+                showToast('Opening driver management...', 'success');
+            });
+
+            document.getElementById('refreshChartBtn').addEventListener('click', function() {
+                updateChart();
+                showToast('Chart refreshed!', 'success');
+            });
+
+            // Dispatcher dashboard buttons
+            document.getElementById('dispatcherScanBtn').addEventListener('click', function() {
+                showQrScannerModal();
+            });
+
+            document.getElementById('dispatcherAssignBtn').addEventListener('click', function() {
+                showToast('Opening route assignment...', 'success');
+            });
+
+            document.getElementById('dispatcherMonitorBtn').addEventListener('click', function() {
+                showGpsTrackingModal();
+            });
+
+            document.getElementById('dispatcherAlertBtn').addEventListener('click', function() {
+                showToast('Opening alerts dashboard...', 'success');
+            });
+
+            document.getElementById('startScannerBtn').addEventListener('click', function() {
+                showQrScannerModal();
+            });
+
+            document.getElementById('manualEntryBtn').addEventListener('click', function() {
+                const packageId = 'PKG-' + Math.floor(10000 + Math.random() * 90000);
+                document.getElementById('packageId').value = packageId;
+                showToast(`Package ID generated: ${packageId}`);
+            });
+
+            document.getElementById('refreshDriversBtn').addEventListener('click', function() {
+                populateActiveDrivers();
+                showToast('Drivers list refreshed!', 'success');
+            });
+
+            // Driver dashboard buttons
+            document.getElementById('driverScanBtn').addEventListener('click', function() {
+                showQrScannerModal();
+            });
+
+            document.getElementById('driverMapBtn').addEventListener('click', function() {
+                showNavigationModal();
+            });
+
+            document.getElementById('driverProofBtn').addEventListener('click', function() {
+                showToast('Opening proof of delivery...', 'success');
+            });
+
+            document.getElementById('driverSupportBtn').addEventListener('click', function() {
+                showToast('Contacting support...', 'success');
+            });
+
+            document.getElementById('startRouteBtn').addEventListener('click', function() {
+                startDriverRoute();
+            });
+
+            document.getElementById('driverScanFab').addEventListener('click', function() {
+                showQrScannerModal();
+            });
+
+            // Driver map view buttons
+            document.getElementById('refreshMapBtn').addEventListener('click', function() {
+                initializeDriverMap();
+                showToast('Map refreshed!', 'success');
+            });
+
+            // Driver profile view buttons
+            document.getElementById('editProfileBtn').addEventListener('click', function() {
+                showToast('Edit profile feature coming soon!', 'success');
+            });
+
+            // Modal close buttons
+            document.getElementById('closePackageModal').addEventListener('click', function() {
+                hideModal('packageModal');
+            });
+
+            document.getElementById('closeAssignModal').addEventListener('click', function() {
+                hideModal('assignDriverModal');
+            });
+
+            document.getElementById('closeDetailsModal').addEventListener('click', function() {
+                hideModal('packageDetailsModal');
+            });
+
+            document.getElementById('closeQrScannerModal').addEventListener('click', function() {
+                stopQrScanner();
+                hideModal('qrScannerModal');
+            });
+
+            document.getElementById('closeGpsModal').addEventListener('click', function() {
+                hideModal('gpsTrackingModal');
+            });
+
+            document.getElementById('closeNavigationModal').addEventListener('click', function() {
+                hideModal('navigationModal');
+                if (navigationMap) {
+                    navigationMap.remove();
+                    navigationMap = null;
+                }
+            });
+
+            // Form submissions
+            document.getElementById('packageForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                addNewPackage();
+            });
+
+            document.getElementById('assignDriverForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                assignDriverToPackage();
+            });
+
+            document.getElementById('packageOnboardingForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                onboardPackage();
+            });
+
+            // Package action buttons
+            document.getElementById('takePhotoBtn').addEventListener('click', function() {
+                showToast('Photo capture feature coming soon!', 'success');
+            });
+
+            document.getElementById('getSignatureBtn').addEventListener('click', function() {
+                showToast('Signature capture feature coming soon!', 'success');
+            });
+
+            document.getElementById('startDeliveryBtn').addEventListener('click', function() {
+                if (currentPackageDetails) {
                     updatePackageStatus('in-transit');
-                });
-            }
-            
-            const completeDeliveryBtn = document.getElementById('completeDeliveryBtn');
-            if (completeDeliveryBtn) {
-                completeDeliveryBtn.addEventListener('click', function() {
+                }
+            });
+
+            document.getElementById('completeDeliveryBtn').addEventListener('click', function() {
+                if (currentPackageDetails) {
                     updatePackageStatus('delivered');
-                });
-            }
-            
-            const reportIssueBtn = document.getElementById('reportIssueBtn');
-            if (reportIssueBtn) {
-                reportIssueBtn.addEventListener('click', function() {
+                }
+            });
+
+            document.getElementById('reportIssueBtn').addEventListener('click', function() {
+                if (currentPackageDetails) {
                     updatePackageStatus('failed');
+                }
+            });
+
+            // QR Scanner buttons
+            document.getElementById('stopScannerBtn').addEventListener('click', function() {
+                stopQrScanner();
+                hideModal('qrScannerModal');
+            });
+
+            // Navigation buttons
+            document.getElementById('startNavigationBtn').addEventListener('click', function() {
+                startNavigation();
+            });
+
+            // Bottom navigation for driver
+            document.querySelectorAll('.bottom-navbar .nav-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.bottom-navbar .nav-item').forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                    const view = this.getAttribute('data-view');
+                    switchDriverView(view);
                 });
-            }
-            
-            // Proof of delivery buttons
-            const takePhotoBtn = document.getElementById('takePhotoBtn');
-            if (takePhotoBtn) {
-                takePhotoBtn.addEventListener('click', function() {
-                    simulatePhotoCapture();
-                });
-            }
-            
-            const getSignatureBtn = document.getElementById('getSignatureBtn');
-            if (getSignatureBtn) {
-                getSignatureBtn.addEventListener('click', function() {
-                    simulateSignatureCapture();
-                });
-            }
-            
-            // Back button in driver app
-            const backBtn = document.getElementById('backBtn');
-            if (backBtn) {
-                backBtn.addEventListener('click', function() {
-                    document.getElementById('packageDetails').classList.remove('view-active');
-                    document.getElementById('driverDashboard').classList.add('view-active');
-                });
-            }
-            
-            // Package item clicks in driver app
-            document.addEventListener('click', function(e) {
-                if (e.target.closest('.package-item')) {
-                    const packageItem = e.target.closest('.package-item');
-                    const packageId = packageItem.getAttribute('data-package');
-                    showPackageDetails(packageId);
+            });
+
+            // Close modals when clicking outside
+            window.addEventListener('click', function(e) {
+                if (e.target.classList.contains('modal')) {
+                    e.target.style.display = 'none';
+                    // Stop any active media streams when modal closes
+                    if (qrScannerActive) {
+                        stopQrScanner();
+                    }
+                    if (videoStream) {
+                        stopCamera();
+                    }
                 }
             });
         }
@@ -1928,51 +2329,89 @@
             }
         }
 
+        function handleAuth() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            
+            if (authMode === 'login') {
+                login(email, password);
+            } else {
+                const firstName = document.getElementById('firstName').value;
+                const lastName = document.getElementById('lastName').value;
+                const role = document.getElementById('userRole').value;
+                register(email, password, firstName, lastName, role);
+            }
+        }
+
+        function login(email, password) {
+            demoLogin(email, password);
+        }
+
+        function register(email, password, firstName, lastName, role) {
+            demoLogin(email, password);
+        }
+
+        function demoLogin(email, password) {
+            const demoAccounts = {
+                'admin@cargolens.com': { password: 'admin123', role: 'admin' },
+                'dispatcher@cargolens.com': { password: 'dispatch123', role: 'dispatcher' },
+                'driver@cargolens.com': { password: 'driver123', role: 'driver' }
+            };
+            
+            if (demoAccounts[email] && demoAccounts[email].password === password) {
+                currentUser = { email: email, displayName: email.split('@')[0] };
+                currentRole = demoAccounts[email].role;
+                
+                localStorage.setItem('cargolens_user', JSON.stringify({
+                    email: email,
+                    role: currentRole,
+                    displayName: email.split('@')[0]
+                }));
+                
+                showToast('Login successful!', 'success');
+                showDashboard();
+                initializeDashboard();
+            } else {
+                showToast('Invalid email or password', 'error');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            currentRole = null;
+            localStorage.removeItem('cargolens_user');
+            showToast('Logged out successfully', 'success');
+            showAuthPage();
+        }
+
         function showAuthPage() {
             document.getElementById('authPage').classList.add('active-view');
             document.getElementById('adminDashboard').classList.remove('active-view');
             document.getElementById('dispatcherDashboard').classList.remove('active-view');
-            document.getElementById('driverApp').classList.remove('active-view');
+            document.getElementById('driverDashboard').classList.remove('active-view');
         }
 
         function showDashboard() {
             document.getElementById('authPage').classList.remove('active-view');
             
             if (currentRole === 'admin') {
-                showAdminDashboard();
+                document.getElementById('adminDashboard').classList.add('active-view');
             } else if (currentRole === 'dispatcher') {
-                showDispatcherDashboard();
+                document.getElementById('dispatcherDashboard').classList.add('active-view');
             } else {
-                showDriverApp();
+                document.getElementById('driverDashboard').classList.add('active-view');
             }
         }
 
-        function showAdminDashboard() {
-            document.getElementById('adminDashboard').classList.add('active-view');
-            document.getElementById('dispatcherDashboard').classList.remove('active-view');
-            document.getElementById('driverApp').classList.remove('active-view');
-            currentRole = 'admin';
-        }
-
-        function showDispatcherDashboard() {
-            document.getElementById('adminDashboard').classList.remove('active-view');
-            document.getElementById('dispatcherDashboard').classList.add('active-view');
-            document.getElementById('driverApp').classList.remove('active-view');
-            currentRole = 'dispatcher';
-        }
-
-        function showDriverApp() {
-            document.getElementById('adminDashboard').classList.remove('active-view');
-            document.getElementById('dispatcherDashboard').classList.remove('active-view');
-            document.getElementById('driverApp').classList.add('active-view');
-            currentRole = 'driver';
+        function initializeDashboard() {
+            updateUserAvatar();
             
-            // Update driver welcome message
-            const driver = drivers.find(d => d.id === currentDriverId);
-            if (driver) {
-                document.getElementById('driverWelcome').textContent = `Hello, ${driver.name}!`;
-            } else if (currentUser) {
-                document.getElementById('driverWelcome').textContent = `Hello, ${currentUser.displayName || 'Driver'}!`;
+            if (currentRole === 'admin') {
+                initializeAdminDashboard();
+            } else if (currentRole === 'dispatcher') {
+                initializeDispatcherDashboard();
+            } else {
+                initializeDriverDashboard();
             }
         }
 
@@ -1988,222 +2427,825 @@
             if (driverAvatar) driverAvatar.textContent = initial;
         }
 
-        function register() {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
-            const firstName = document.getElementById('firstName').value;
-            const lastName = document.getElementById('lastName').value;
-            const role = document.getElementById('userRole').value;
-
-            if (!firstName || !lastName) {
-                showToast('Please enter your name', 'error');
-                return;
-            }
-
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    // Signed up successfully
-                    const user = userCredential.user;
-                    
-                    // Update user profile
-                    return user.updateProfile({
-                        displayName: `${firstName} ${lastName}`
-                    }).then(() => {
-                        // Save user role to Firestore
-                        return db.collection('users').doc(user.uid).set({
-                            email: email,
-                            firstName: firstName,
-                            lastName: lastName,
-                            role: role,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    });
-                })
-                .then(() => {
-                    showToast('Account created successfully!', 'success');
-                    currentUser = auth.currentUser;
-                    currentRole = role;
-                    
-                    // If user registered as driver, create driver profile
-                    if (role === 'driver') {
-                        return db.collection('drivers').doc(currentUser.uid).set({
-                            id: currentUser.uid,
-                            name: `${firstName} ${lastName}`,
-                            email: email,
-                            phone: '',
-                            vehicle: '',
-                            rating: 5.0,
-                            deliveryCount: 0,
-                            status: 'active'
-                        });
-                    }
-                })
-                .then(() => {
-                    showDashboard();
-                })
-                .catch((error) => {
-                    let errorMessage = 'Registration failed: ';
-                    switch (error.code) {
-                        case 'auth/email-already-in-use':
-                            errorMessage += 'Email already in use';
-                            break;
-                        case 'auth/invalid-email':
-                            errorMessage += 'Invalid email address';
-                            break;
-                        case 'auth/weak-password':
-                            errorMessage += 'Password is too weak';
-                            break;
-                        case 'auth/too-many-requests':
-                            errorMessage += 'Too many attempts. Please try again later';
-                            break;
-                        default:
-                            errorMessage += error.message;
-                    }
-                    showToast(errorMessage, 'error');
-                });
+        function initializeAdminDashboard() {
+            populatePackagesTable();
+            populateDriversTable();
+            initializeChart();
+            updateStats();
         }
 
-        function login() {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
+        function initializeDispatcherDashboard() {
+            populateDispatcherPackagesTable();
+            populateActiveDrivers();
+        }
+
+        function initializeDriverDashboard() {
+            populateDriverPackages();
+            initializeDriverChart();
+            updateDriverStats();
             
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    // Signed in successfully
-                    currentUser = userCredential.user;
-                    showToast('Login successful!', 'success');
-                })
-                .catch((error) => {
-                    let errorMessage = 'Login failed: ';
-                    switch (error.code) {
-                        case 'auth/user-not-found':
-                            errorMessage += 'No account found with this email';
-                            break;
-                        case 'auth/wrong-password':
-                            errorMessage += 'Incorrect password';
-                            break;
-                        case 'auth/invalid-email':
-                            errorMessage += 'Invalid email address';
-                            break;
-                        case 'auth/too-many-requests':
-                            errorMessage += 'Too many failed attempts. Please try again later or create a new account';
-                            break;
-                        default:
-                            errorMessage += error.message;
-                    }
-                    showToast(errorMessage, 'error');
-                });
+            // Set driver welcome message
+            const driverWelcome = document.getElementById('driverWelcome');
+            if (driverWelcome && currentUser) {
+                driverWelcome.textContent = `Hello, ${currentUser.displayName || 'Driver'}!`;
+            }
+            
+            // Initialize driver profile
+            initializeDriverProfile();
+            
+            // Initialize driver history
+            populateDriverHistory();
+            
+            // Start location tracking for driver
+            if (currentRole === 'driver') {
+                startLocationTracking();
+            }
         }
 
-        function logout() {
-            auth.signOut().then(() => {
-                currentUser = null;
-                currentRole = null;
-                showAuthPage();
-                showToast('Logged out successfully', 'success');
+        function populatePackagesTable() {
+            const tableBody = document.getElementById('packagesTableBody');
+            tableBody.innerHTML = '';
+            
+            samplePackages.forEach(pkg => {
+                const row = document.createElement('tr');
+                const statusClass = `status-${pkg.status}`;
+                
+                row.innerHTML = `
+                    <td>${pkg.id}</td>
+                    <td>${pkg.recipient}</td>
+                    <td>${pkg.driver}</td>
+                    <td>${pkg.location}</td>
+                    <td><span class="status-badge ${statusClass}">${pkg.status.toUpperCase()}</span></td>
+                    <td>${pkg.dueDate}</td>
+                    <td>
+                        <button class="btn" onclick="editPackage('${pkg.id}')" style="padding: 5px 10px; font-size: 0.8rem;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn" onclick="trackPackage('${pkg.id}')" style="padding: 5px 10px; font-size: 0.8rem; background: var(--primary); color: white;">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
             });
         }
 
-        // ... (rest of the functions remain the same as previous version)
+        function populateDriversTable() {
+            const tableBody = document.getElementById('driversTableBody');
+            tableBody.innerHTML = '';
+            
+            sampleDrivers.forEach(driver => {
+                const row = document.createElement('tr');
+                const statusClass = driver.status === 'active' ? 'status-delivered' : 'status-pending';
+                
+                row.innerHTML = `
+                    <td>${driver.name}</td>
+                    <td>${driver.deliveries}</td>
+                    <td>${driver.successRate}</td>
+                    <td>${driver.rating}/5.0</td>
+                    <td><span class="status-badge ${statusClass}">${driver.status.toUpperCase()}</span></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
 
-        // Initialize with some sample data if database is empty
-        function initializeSampleData() {
-            // Check if we have any packages
-            db.collection('packages').get().then(snapshot => {
-                if (snapshot.empty) {
-                    // Add sample drivers first
-                    const sampleDrivers = [
-                        {
-                            id: 'sample-driver-1',
-                            name: 'Chanda Banda',
-                            email: 'chanda@cargolens.com',
-                            phone: '+260 97 123 4567',
-                            vehicle: 'Toyota Hilux',
-                            rating: 4.9,
-                            deliveryCount: 142,
-                            status: 'active'
-                        },
-                        {
-                            id: 'sample-driver-2',
-                            name: 'Mwila Tembo',
-                            email: 'mwila@cargolens.com',
-                            phone: '+260 96 234 5678',
-                            vehicle: 'Nissan Navara',
-                            rating: 4.6,
-                            deliveryCount: 128,
-                            status: 'active'
+        function populateDispatcherPackagesTable() {
+            const tableBody = document.getElementById('dispatcherPackagesTableBody');
+            tableBody.innerHTML = '';
+            
+            samplePackages.forEach(pkg => {
+                const row = document.createElement('tr');
+                const statusClass = `status-${pkg.status}`;
+                
+                row.innerHTML = `
+                    <td>${pkg.id}</td>
+                    <td>${pkg.recipient}</td>
+                    <td>${pkg.sender}</td>
+                    <td>${pkg.timestamp}</td>
+                    <td><span class="status-badge ${statusClass}">${pkg.status.toUpperCase()}</span></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function populateActiveDrivers() {
+            const driversList = document.getElementById('activeDriversList');
+            driversList.innerHTML = '';
+            
+            sampleDrivers.filter(driver => driver.status === 'active').forEach(driver => {
+                const driverCard = document.createElement('div');
+                driverCard.className = 'driver-card';
+                driverCard.innerHTML = `
+                    <div class="driver-avatar">${driver.name.charAt(0)}</div>
+                    <div class="driver-details">
+                        <div class="driver-name">${driver.name}</div>
+                        <div class="driver-stats">
+                            <span>${driver.vehicle}</span>
+                            <span class="driver-rating">★ ${driver.rating}</span>
+                        </div>
+                        <div class="performance-bar">
+                            <div class="performance-fill" style="width: ${parseInt(driver.successRate)}%"></div>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="contactDriver('${driver.name}')" style="padding: 5px 10px; font-size: 0.8rem;">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                `;
+                driversList.appendChild(driverCard);
+            });
+        }
+
+        function populateDriverPackages() {
+            const packageList = document.getElementById('driverPackageList');
+            packageList.innerHTML = '';
+            
+            driverPackages.forEach(pkg => {
+                const packageItem = document.createElement('div');
+                packageItem.className = 'package-item';
+                packageItem.setAttribute('data-package', pkg.id);
+                packageItem.innerHTML = `
+                    <div class="package-info">
+                        <div class="package-id">${pkg.id}</div>
+                        <div class="package-details">${pkg.recipient} - ${pkg.address}</div>
+                        <div class="package-details">Due: ${pkg.dueTime} | Priority: ${pkg.priority}</div>
+                        <div class="status-badge status-${pkg.status}">${pkg.status.toUpperCase()}</div>
+                    </div>
+                    <button class="btn" onclick="showPackageDetails('${pkg.id}')" style="padding: 5px 10px; font-size: 0.8rem; background: var(--primary); color: white;">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                `;
+                packageList.appendChild(packageItem);
+            });
+        }
+
+        function populateDriverHistory() {
+            const tableBody = document.getElementById('driverHistoryTableBody');
+            tableBody.innerHTML = '';
+            
+            // Generate sample history data
+            const historyData = Array.from({length: 15}, (_, i) => {
+                const recipient = `${zambianNames[Math.floor(Math.random() * zambianNames.length)]} ${zambianSurnames[Math.floor(Math.random() * zambianSurnames.length)]}`;
+                const city = zambianCities[Math.floor(Math.random() * zambianCities.length)];
+                const statuses = ['delivered', 'failed'];
+                const status = statuses[Math.floor(Math.random() * statuses.length)];
+                const date = new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000);
+                
+                return {
+                    date: date.toLocaleDateString(),
+                    id: `PKG-${String(i + 100).padStart(3, '0')}`,
+                    recipient: recipient,
+                    location: city,
+                    status: status
+                };
+            });
+            
+            historyData.forEach(item => {
+                const row = document.createElement('tr');
+                const statusClass = `status-${item.status}`;
+                
+                row.innerHTML = `
+                    <td>${item.date}</td>
+                    <td>${item.id}</td>
+                    <td>${item.recipient}</td>
+                    <td>${item.location}</td>
+                    <td><span class="status-badge ${statusClass}">${item.status.toUpperCase()}</span></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function initializeDriverProfile() {
+            document.getElementById('profileName').textContent = currentUser ? currentUser.displayName : 'Driver Name';
+            document.getElementById('profileAvatar').textContent = currentUser ? currentUser.displayName.charAt(0).toUpperCase() : 'D';
+        }
+
+        function initializeChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Packages Delivered',
+                        data: [120, 135, 140, 128, 145, 160, 155, 170, 165, 180, 175, 190],
+                        borderColor: '#8B4513',
+                        backgroundColor: 'rgba(139, 69, 19, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'On-Time Delivery Rate %',
+                        data: [92, 94, 95, 93, 96, 97, 95, 98, 96, 97, 98, 99],
+                        borderColor: '#228B22',
+                        backgroundColor: 'rgba(34, 139, 34, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
                         }
-                    ];
-
-                    // Add drivers to Firestore
-                    sampleDrivers.forEach(driver => {
-                        db.collection('drivers').doc(driver.id).set(driver);
-                    });
-
-                    // Add sample packages
-                    const samplePackages = [
-                        {
-                            id: 'PKG-78342',
-                            senderName: 'Lusaka Office Supplies',
-                            senderContact: '+260 21 123 456',
-                            recipientName: 'Nchimunya Mwamba',
-                            recipientContact: '+260 97 123 4567',
-                            recipientAddress: '123 Independence Ave, Lusaka',
-                            packageDescription: '2 boxes of stationery',
-                            status: 'delivered',
-                            driverId: 'sample-driver-1',
-                            driverName: 'Chanda Banda',
-                            dropPoint: 'Point A',
-                            createdAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 2 * 60 * 60 * 1000)),
-                            dueDate: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 1 * 60 * 60 * 1000)),
-                            deliveredAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 30 * 60 * 1000))
-                        },
-                        {
-                            id: 'PKG-78343',
-                            senderName: 'Tech Solutions Ltd',
-                            senderContact: '+260 21 234 567',
-                            recipientName: 'Mwansa Ngulube',
-                            recipientContact: '+260 97 234 5678',
-                            recipientAddress: '45 Cairo Road, Lusaka',
-                            packageDescription: 'Laptop and accessories',
-                            status: 'in-transit',
-                            driverId: 'sample-driver-2',
-                            driverName: 'Mwila Tembo',
-                            dropPoint: 'Point B',
-                            createdAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 90 * 60 * 1000)),
-                            dueDate: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 2 * 60 * 60 * 1000)),
-                            inTransitAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 30 * 60 * 1000))
-                        },
-                        {
-                            id: 'PKG-78344',
-                            senderName: 'Global Imports',
-                            senderContact: '+260 21 345 678',
-                            recipientName: 'Brian Lungu',
-                            recipientContact: '+260 97 345 6789',
-                            recipientAddress: '78 Lumumba Rd, Lusaka',
-                            packageDescription: 'Document envelope',
-                            status: 'pending',
-                            createdAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 30 * 60 * 1000)),
-                            dueDate: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000))
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
                         }
-                    ];
-                    
-                    // Add sample packages to Firebase
-                    samplePackages.forEach(pkg => {
-                        db.collection('packages').doc(pkg.id).set(pkg);
-                    });
-                    
-                    showToast('Sample data initialized!', 'success');
+                    }
                 }
             });
         }
 
-        // Call this function to initialize sample data (uncomment to use)
-        // initializeSampleData();
+        function initializeDriverChart() {
+            const ctx = document.getElementById('driverPerformanceChart').getContext('2d');
+            
+            driverPerformanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+                    datasets: [{
+                        label: 'Deliveries Completed',
+                        data: [8, 12, 10, 14, 11, 6],
+                        backgroundColor: '#8B4513',
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
 
-        // Note: The remaining functions (loadInitialData, updateAllDisplays, etc.)
-        // remain exactly the same as in the previous version
-        // They are omitted here for brevity but should be included in the actual implementation
+        function updateChart() {
+            if (performanceChart) {
+                performanceChart.data.datasets[0].data = performanceChart.data.datasets[0].data.map(
+                    value => value + Math.floor(Math.random() * 10) - 5
+                );
+                performanceChart.update();
+            }
+        }
+
+        function updateStats() {
+            // Stats are already set with sample data
+        }
+
+        function updateDriverStats() {
+            // Driver stats are already set with sample data
+        }
+
+        function showModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function hideModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function populateAssignModal() {
+            const packageSelect = document.getElementById('selectPackage');
+            const driverSelect = document.getElementById('selectDriver');
+            
+            packageSelect.innerHTML = '<option value="">Choose a package</option>';
+            driverSelect.innerHTML = '<option value="">Choose a driver</option>';
+            
+            samplePackages.filter(pkg => pkg.driver === 'Not Assigned').forEach(pkg => {
+                const option = document.createElement('option');
+                option.value = pkg.id;
+                option.textContent = `${pkg.id} - ${pkg.recipient}`;
+                packageSelect.appendChild(option);
+            });
+            
+            sampleDrivers.filter(driver => driver.status === 'active').forEach(driver => {
+                const option = document.createElement('option');
+                option.value = driver.name;
+                option.textContent = driver.name;
+                driverSelect.appendChild(option);
+            });
+        }
+
+        function addNewPackage() {
+            const recipient = document.getElementById('packageRecipient').value;
+            const address = document.getElementById('packageAddress').value;
+            const description = document.getElementById('packageDescription').value;
+            const priority = document.getElementById('packagePriority').value;
+            
+            const newId = `PKG-${String(samplePackages.length + 1).padStart(3, '0')}`;
+            
+            samplePackages.unshift({
+                id: newId,
+                recipient: recipient,
+                driver: 'Not Assigned',
+                location: address.split(',')[0],
+                status: 'pending',
+                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                sender: 'Manual Entry',
+                timestamp: new Date().toLocaleString()
+            });
+            
+            populatePackagesTable();
+            showToast(`Package ${newId} created successfully!`, 'success');
+            hideModal('packageModal');
+            document.getElementById('packageForm').reset();
+        }
+
+        function assignDriverToPackage() {
+            const packageId = document.getElementById('selectPackage').value;
+            const driverName = document.getElementById('selectDriver').value;
+            
+            if (!packageId || !driverName) {
+                showToast('Please select both package and driver', 'error');
+                return;
+            }
+            
+            const packageIndex = samplePackages.findIndex(pkg => pkg.id === packageId);
+            if (packageIndex !== -1) {
+                samplePackages[packageIndex].driver = driverName;
+                samplePackages[packageIndex].status = 'in-transit';
+                
+                populatePackagesTable();
+                populateDispatcherPackagesTable();
+                
+                showToast(`Driver ${driverName} assigned to package ${packageId}`, 'success');
+                hideModal('assignDriverModal');
+                document.getElementById('assignDriverForm').reset();
+            }
+        }
+
+        function onboardPackage() {
+            const packageId = document.getElementById('packageId').value;
+            const senderName = document.getElementById('senderName').value;
+            const recipientName = document.getElementById('recipientName').value;
+            const packageDescription = document.getElementById('packageDescription').value;
+            
+            samplePackages.unshift({
+                id: packageId,
+                recipient: recipientName,
+                driver: 'Not Assigned',
+                location: 'Processing Center',
+                status: 'pending',
+                dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                sender: senderName,
+                timestamp: new Date().toLocaleString()
+            });
+            
+            populateDispatcherPackagesTable();
+            showToast(`Package ${packageId} onboarded successfully!`, 'success');
+            document.getElementById('packageOnboardingForm').reset();
+        }
+
+        function showPackageDetails(packageId) {
+            const pkg = driverPackages.find(p => p.id === packageId);
+            if (!pkg) return;
+            
+            currentPackageDetails = pkg;
+            
+            const detailsContent = document.getElementById('packageDetailsContent');
+            detailsContent.innerHTML = `
+                <div class="package-item">
+                    <div class="package-info">
+                        <div class="package-id">${pkg.id}</div>
+                        <div class="package-details">${pkg.recipient}</div>
+                        <div class="status-badge status-${pkg.status}">${pkg.status.toUpperCase()}</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <h4>Delivery Information</h4>
+                    <p><strong>Address:</strong> ${pkg.address}</p>
+                    <p><strong>Due Time:</strong> ${pkg.dueTime}</p>
+                    <p><strong>Priority:</strong> ${pkg.priority}</p>
+                    <p><strong>Notes:</strong> ${pkg.notes}</p>
+                </div>
+            `;
+            
+            showModal('packageDetailsModal');
+        }
+
+        function updatePackageStatus(status) {
+            if (!currentPackageDetails) return;
+            
+            const packageId = currentPackageDetails.id;
+            const packageIndex = driverPackages.findIndex(p => p.id === packageId);
+            
+            if (packageIndex !== -1) {
+                driverPackages[packageIndex].status = status;
+                
+                populateDriverPackages();
+                showToast(`Package ${packageId} status updated to ${status}`, 'success');
+                hideModal('packageDetailsModal');
+            }
+        }
+
+        // QR Scanner Functions
+        function showQrScannerModal() {
+            showModal('qrScannerModal');
+            startQrScanner();
+        }
+
+        function startQrScanner() {
+            const video = document.getElementById('qr-video');
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function(stream) {
+                    videoStream = stream;
+                    video.srcObject = stream;
+                    video.setAttribute("playsinline", true);
+                    video.play();
+                    qrScannerActive = true;
+                    requestAnimationFrame(tick);
+                })
+                .catch(function(err) {
+                    console.error("Error accessing camera: ", err);
+                    showToast('Camera access denied. Please allow camera permissions.', 'error');
+                });
+        }
+
+        function stopQrScanner() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            
+            const video = document.getElementById('qr-video');
+            if (video) {
+                video.srcObject = null;
+            }
+            
+            qrScannerActive = false;
+        }
+
+        function tick() {
+            if (!qrScannerActive) return;
+            
+            const video = document.getElementById('qr-video');
+            const canvasElement = document.createElement('canvas');
+            const canvas = canvasElement.getContext('2d');
+            
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvasElement.height = video.videoHeight;
+                canvasElement.width = video.videoWidth;
+                canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+                
+                if (code) {
+                    // QR code detected
+                    showToast(`QR Code detected: ${code.data}`, 'success');
+                    document.getElementById('packageId').value = code.data;
+                    stopQrScanner();
+                    hideModal('qrScannerModal');
+                }
+            }
+            
+            requestAnimationFrame(tick);
+        }
+
+        // GPS Tracking Functions
+        function showGpsTrackingModal() {
+            showModal('gpsTrackingModal');
+            initializeTrackingMap();
+            populateDriverLocations();
+        }
+
+        function initializeTrackingMap() {
+            const mapContainer = document.getElementById('trackingMap');
+            if (!mapContainer) return;
+            
+            // Clear any existing map
+            if (trackingMap) {
+                trackingMap.remove();
+            }
+            
+            // Initialize map with Zambia center
+            trackingMap = L.map('trackingMap').setView([-13.1339, 27.8493], 6);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(trackingMap);
+            
+            // Add driver markers
+            Object.keys(driverLocations).forEach(driverName => {
+                const location = driverLocations[driverName];
+                const marker = L.marker([location.lat, location.lng])
+                    .addTo(trackingMap)
+                    .bindPopup(`<b>${driverName}</b><br>Status: ${location.status}<br>Vehicle: ${sampleDrivers.find(d => d.name === driverName)?.vehicle || 'Unknown'}`);
+                
+                driverMarkers[driverName] = marker;
+            });
+        }
+
+        function populateDriverLocations() {
+            const locationsList = document.getElementById('driverLocationsList');
+            if (!locationsList) return;
+            
+            locationsList.innerHTML = '';
+            
+            Object.keys(driverLocations).forEach(driverName => {
+                const location = driverLocations[driverName];
+                const locationItem = document.createElement('div');
+                locationItem.className = 'driver-location';
+                locationItem.innerHTML = `
+                    <i class="fas fa-truck ${location.status === 'active' ? 'location-active' : 'location-inactive'}"></i>
+                    <div>
+                        <strong>${driverName}</strong>
+                        <div>${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}</div>
+                    </div>
+                    <span class="status-badge ${location.status === 'active' ? 'status-in-transit' : 'status-pending'}">${location.status.toUpperCase()}</span>
+                `;
+                locationsList.appendChild(locationItem);
+            });
+        }
+
+        // Driver Map Functions
+        function initializeDriverMap() {
+            const mapContainer = document.getElementById('driverMap');
+            if (!mapContainer) return;
+            
+            // Clear any existing map
+            if (driverMap) {
+                driverMap.remove();
+            }
+            
+            // Initialize map with Zambia center
+            driverMap = L.map('driverMap').setView([-13.1339, 27.8493], 6);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(driverMap);
+            
+            // Add package delivery points
+            driverPackages.forEach(pkg => {
+                const city = pkg.address.split(', ')[1];
+                if (zambianCityCoordinates[city]) {
+                    const coords = zambianCityCoordinates[city];
+                    L.marker([coords[0], coords[1]])
+                        .addTo(driverMap)
+                        .bindPopup(`<b>${pkg.id}</b><br>${pkg.recipient}<br>${pkg.address}<br>Due: ${pkg.dueTime}`);
+                }
+            });
+            
+            // Add route if driver has current location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const driverLat = position.coords.latitude;
+                    const driverLng = position.coords.longitude;
+                    
+                    // Add driver location marker
+                    L.marker([driverLat, driverLng])
+                        .addTo(driverMap)
+                        .bindPopup('<b>Your Location</b>')
+                        .openPopup();
+                    
+                    // Fit map to show all markers
+                    const group = new L.featureGroup();
+                    driverMap.eachLayer(function(layer) {
+                        if (layer instanceof L.Marker) {
+                            group.addLayer(layer);
+                        }
+                    });
+                    driverMap.fitBounds(group.getBounds().pad(0.1));
+                });
+            }
+        }
+
+        // Navigation Functions
+        function showNavigationModal() {
+            showModal('navigationModal');
+            initializeNavigationMap();
+        }
+
+        function initializeNavigationMap() {
+            const mapContainer = document.getElementById('navigationMap');
+            if (!mapContainer) return;
+            
+            // Clear any existing map
+            if (navigationMap) {
+                navigationMap.remove();
+            }
+            
+            // Initialize map with Zambia center
+            navigationMap = L.map('navigationMap').setView([-13.1339, 27.8493], 6);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(navigationMap);
+            
+            // Get current location for navigation
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const driverLat = position.coords.latitude;
+                    const driverLng = position.coords.longitude;
+                    
+                    // Add driver location marker
+                    L.marker([driverLat, driverLng])
+                        .addTo(navigationMap)
+                        .bindPopup('<b>Your Location</b>');
+                    
+                    // Add destination (first package location)
+                    if (driverPackages.length > 0) {
+                        const firstPackage = driverPackages[0];
+                        const city = firstPackage.address.split(', ')[1];
+                        if (zambianCityCoordinates[city]) {
+                            const destCoords = zambianCityCoordinates[city];
+                            L.marker([destCoords[0], destCoords[1]])
+                                .addTo(navigationMap)
+                                .bindPopup(`<b>Destination</b><br>${firstPackage.recipient}<br>${firstPackage.address}`);
+                            
+                            // Draw route line (simulated)
+                            const routeLine = L.polyline([
+                                [driverLat, driverLng],
+                                [destCoords[0], destCoords[1]]
+                            ], {color: 'blue'}).addTo(navigationMap);
+                            
+                            // Fit map to show route
+                            navigationMap.fitBounds(routeLine.getBounds());
+                            
+                            // Update route details
+                            document.getElementById('routeDetails').innerHTML = `
+                                <p><strong>From:</strong> Your Current Location</p>
+                                <p><strong>To:</strong> ${firstPackage.address}</p>
+                                <p><strong>Distance:</strong> ${(calculateDistance(driverLat, driverLng, destCoords[0], destCoords[1])).toFixed(1)} km</p>
+                                <p><strong>Estimated Time:</strong> ${Math.floor(Math.random() * 120) + 30} minutes</p>
+                            `;
+                        }
+                    }
+                });
+            }
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            // Haversine formula to calculate distance between two points
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function startNavigation() {
+            showToast('Navigation started! Opening in external app...', 'success');
+            // In a real app, this would open the native navigation app
+            setTimeout(() => {
+                hideModal('navigationModal');
+            }, 2000);
+        }
+
+        function startLocationTracking() {
+            if (!navigator.geolocation) {
+                showToast('Geolocation is not supported by this browser', 'error');
+                return;
+            }
+            
+            locationWatchId = navigator.geolocation.watchPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Update driver location in the simulated data
+                    if (currentUser && currentUser.displayName) {
+                        driverLocations[currentUser.displayName] = {
+                            lat: lat,
+                            lng: lng,
+                            status: 'active'
+                        };
+                    }
+                    
+                    // Show toast only occasionally to avoid annoyance
+                    if (Math.random() < 0.1) {
+                        showToast(`Location updated`, 'success');
+                    }
+                },
+                function(error) {
+                    console.error('Error getting location:', error);
+                    showToast('Error getting location', 'error');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        function stopLocationTracking() {
+            if (locationWatchId) {
+                navigator.geolocation.clearWatch(locationWatchId);
+                locationWatchId = null;
+            }
+        }
+
+        // Driver View Switching
+        function switchDriverView(view) {
+            // Hide all driver views
+            document.querySelectorAll('.driver-view').forEach(view => {
+                view.classList.remove('active');
+            });
+            
+            // Show the selected view
+            document.getElementById(view).classList.add('active');
+            
+            // Initialize specific view components if needed
+            if (view === 'driverMapView') {
+                initializeDriverMap();
+            }
+            
+            showToast(`Switched to ${view.replace('driver', '').replace('View', '')} view`, 'success');
+        }
+
+        // Driver-specific functions
+        function startDriverRoute() {
+            showToast('Starting delivery route...', 'success');
+            // In a real app, this would trigger navigation and route optimization
+        }
+
+        // Report and Export Functions
+        function generateReport() {
+            showToast('Generating performance report...', 'success');
+            setTimeout(() => {
+                // Simulate report generation
+                const reportData = "CargoLens Performance Report - Zambia\n\n" +
+                    "Total Packages: 156\n" +
+                    "Delivered: 128\n" +
+                    "In Transit: 24\n" +
+                    "Pending: 4\n" +
+                    "Success Rate: 92.3%\n\n" +
+                    "Report generated on: " + new Date().toLocaleString();
+                
+                // Create a download link for the report
+                const blob = new Blob([reportData], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'cargolens-report-zambia.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showToast('Report generated successfully!', 'success');
+            }, 2000);
+        }
+
+        function exportData() {
+            showToast('Exporting data to CSV...', 'success');
+            setTimeout(() => {
+                // Convert sample data to CSV
+                let csvContent = "Package ID,Recipient,Driver,Location,Status,Due Date\n";
+                samplePackages.forEach(pkg => {
+                    csvContent += `${pkg.id},${pkg.recipient},${pkg.driver},${pkg.location},${pkg.status},${pkg.dueDate}\n`;
+                });
+                
+                // Create a download link for the CSV
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'cargolens-data-zambia.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showToast('Data exported successfully!', 'success');
+            }, 1500);
+        }
+
+        // Global functions for various actions
+        function editPackage(packageId) {
+            showToast(`Editing package ${packageId}...`, 'success');
+        }
+
+        function trackPackage(packageId) {
+            showGpsTrackingModal();
+            showToast(`Tracking package ${packageId}...`, 'success');
+        }
+
+        function contactDriver(driverName) {
+            showToast(`Calling ${driverName}...`, 'success');
+            // In a real app, this would initiate a phone call
+        }
     </script>
 </body>
 </html>
